@@ -1,0 +1,270 @@
+/* Tailwind CSS directives - suppress unknown at-rule warnings */
+/* Rebuild trigger */
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
+@layer base {
+
+  /* Smooth scroll behavior for anchor links */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  :root {
+    /* Light Mode Color Tokens */
+    --primary: #22c55e;
+    --primary-hover: #16a34a;
+    --primary-soft: #f0fdf4;
+    --bg: #fcfdfc;
+    --bg-elevated: #FFFFFF;
+    --bg-muted: #F0F4F2;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --danger: #EF4444;
+    --success: #16A34A;
+    --warning: #F59E0B;
+
+    /* Dark Mode Color Tokens */
+    --bg-dark: #102216;
+    --surface-dark: #1A2E20;
+    --surface-dark-2: #253D2B;
+    --border-dark: #2D4A35;
+    --text-dark: #E8ECE9;
+    --text-muted-dark: #A1C4AD;
+
+    /* Radius Tokens */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-full: 9999px;
+
+    /* Shadow Tokens */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-primary: 0 4px 20px rgba(34, 197, 94, 0.2);
+
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 142 88% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 142 88% 50%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark Mode Override */
+    --bg: var(--bg-dark);
+    --bg-elevated: var(--surface-dark);
+    --text: var(--text-dark);
+    --text-muted: var(--text-muted-dark);
+    --border: var(--border-dark);
+
+    --background: 142 40% 6%;
+    --foreground: 0 0% 98%;
+    --card: 142 40% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 142 40% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142 88% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 142 30% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 142 30% 12%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 142 30% 12%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 142 30% 20%;
+    --input: 142 30% 20%;
+    --ring: 142 88% 50%;
+  }
+
+  /* Prevent auto-zoom on mobile inputs */
+  @media screen and (max-width: 768px) {
+
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+
+    /* Prevent horizontal scrolling and floating modals */
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden !important;
+      position: fixed;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      overscroll-behavior: none;
+    }
+
+    /* Ensure modals don't shift horizontally */
+    [role="dialog"],
+    .fixed.inset-0 {
+      overflow-x: hidden !important;
+      width: 100vw;
+      width: 100%;
+      position: fixed;
+      overscroll-behavior: none;
+    }
+
+    /* Prevent gesture-based panning */
+    * {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+
+    /* Allow text selection only in input fields */
+    input,
+    textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
+    }
+
+    /* Disable pinch zoom on mobile */
+    body {
+      touch-action: pan-y;
+      overscroll-behavior: none;
+    }
+
+    /* Prevent pull-to-refresh on modal drag */
+    .drag-handle,
+    [onTouchStart*="handleTouchStart"] {
+      touch-action: none;
+      overscroll-behavior: contain;
+    }
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Custom animations for workers page */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Button press animation */
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.92);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-button-press {
+  animation: buttonPress 0.3s ease-out;
+}
+
+/* Ripple effect for buttons */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}

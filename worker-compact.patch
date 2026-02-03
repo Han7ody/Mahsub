@@ -1,0 +1,122 @@
+--- a/components/dashboard/WorkerDetailsModal.tsx
++++ b/components/dashboard/WorkerDetailsModal.tsx
+@@ -574,7 +574,7 @@
+           {/* Avatar Section */}
+           <div className="flex flex-col items-center">
+             <div className="relative">
+-              <div className="w-32 h-32 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-md flex items-center justify-center text-slate-400 text-4xl font-bold overflow-hidden">
++              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-md flex items-center justify-center text-slate-400 text-3xl font-bold overflow-hidden">
+                 {avatarPreview ? (
+                   <img 
+                     src={avatarPreview} 
+@@ -595,18 +595,18 @@
+                 type="button"
+                 onClick={handleImageClick}
+                 disabled={isUploadingAvatar || isLoadingExistingAvatar}
+-                className="absolute bottom-1 right-1 w-10 h-10 bg-primary text-white rounded-full border-4 border-white dark:border-slate-900 shadow-lg flex items-center justify-center hover:bg-green-600 transition-all disabled:opacity-50"
++                className="absolute bottom-0 right-0 w-9 h-9 bg-primary text-white rounded-full border-3 border-white dark:border-slate-900 shadow-lg flex items-center justify-center hover:bg-green-600 transition-all disabled:opacity-50"
+               >
+                 {isUploadingAvatar ? (
+                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                 ) : (
+-                  <span className="material-symbols-outlined text-xl">
++                  <span className="material-symbols-outlined text-lg">
+                     photo_camera
+                   </span>
+                 )}
+               </button>
+             </div>
+-            <button
++            <button 
+               type="button"
+               onClick={handleImageClick}
+               disabled={isUploadingAvatar || isLoadingExistingAvatar}
+-              className="mt-3 text-sm font-semibold text-primary hover:text-green-600 transition-colors disabled:opacity-50"
++              className="mt-2 text-xs font-semibold text-primary hover:text-green-600 transition-colors disabled:opacity-50"
+             >
+               {isUploadingAvatar ? "جاري الرفع..." : isLoadingExistingAvatar ? "جاري التحميل..." : "تغيير الصورة"}
+@@ -615,7 +615,7 @@
+ 
+           {/* Basic Info */}
+-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
++          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <label className="block text-sm font-semibold text-text-main">
+                 الاسم بالكامل
+@@ -623,7 +623,7 @@
+               <input
+                 className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-text-main dark:text-white"
+-                placeholder="مثلاً: محمد علي حسن"
++                placeholder="الاسم الكامل"
+                 type="text"
+                 value={name}
+                 onChange={(e) => setName(e.target.value)}
+@@ -648,7 +648,7 @@
+ 
+           {/* Role Selection */}
+-          <div className="space-y-3">
++          <div className="space-y-2">
+             <label className="block text-sm font-semibold text-text-main">
+               الدور الوظيفي
+             </label>
+@@ -661,7 +661,7 @@
+                   value="مدير"
+                   onChange={() => setRole("مدير")}
+                 />
+-                <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all">
++                <div className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all text-sm">
+                   <span className="material-symbols-outlined text-lg">
+                     admin_panel_settings
+                   </span>
+@@ -676,7 +676,7 @@
+                   value="موظف"
+                   onChange={() => setRole("موظف")}
+                 />
+-                <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all">
++                <div className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all text-sm">
+                   <span className="material-symbols-outlined text-lg">
+                     badge
+                   </span>
+@@ -691,7 +691,7 @@
+                   value="محاسب"
+                   onChange={() => setRole("محاسب")}
+                 />
+-                <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all">
++                <div className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all text-sm">
+                   <span className="material-symbols-outlined text-lg">
+                     calculate
+                   </span>
+@@ -706,7 +706,7 @@
+                   value="أخرى"
+                   onChange={() => setRole("أخرى")}
+                 />
+-                <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all">
++                <div className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-text-muted peer-checked:bg-white dark:peer-checked:bg-slate-700 peer-checked:text-primary peer-checked:shadow-sm font-medium transition-all text-sm">
+                   <span className="material-symbols-outlined text-lg">
+                     more_horiz
+                   </span>
+@@ -717,7 +717,7 @@
+ 
+           {/* Permissions */}
+-          <div className="space-y-4">
++          <div className="space-y-3">
+             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+               <h3 className="text-sm font-bold text-text-main flex items-center gap-2">
+@@ -742,7 +742,7 @@
+                 </p>
+               </div>
+             )}
+-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
++            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+               {[
+                 "عرض العملاء",
+                 "إضافة معاملة",
+@@ -753,7 +753,7 @@
+               ].map((permission, idx) => (
+                 <label
+                   key={idx}
+-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
++                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                 >
+                   <span
+                     className={`text-sm font-medium ${

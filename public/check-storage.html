@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Supabase Storage</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Storage Check</h1>
+    <div id="results"></div>
+    
+    <script>
+        const supabaseUrl = 'https://jpzaudbzbpzzcvwvdjhx.supabase.co'
+        const supabaseKey = 'sb_publishable_ONcyVFHPXUgZKBqDwbFCQg_mHsNzvoW'
+        
+        const { createClient } = supabase
+        const client = createClient(supabaseUrl, supabaseKey)
+        
+        async function checkStorage() {
+            const results = document.getElementById('results')
+            
+            // Check if avatars bucket exists
+            results.innerHTML += '<h2>Checking avatars bucket...</h2>'
+            
+            const { data: buckets, error } = await client.storage.listBuckets()
+            
+            if (error) {
+                results.innerHTML += `<p style="color: red;">❌ Error listing buckets: ${error.message}</p>`
+            } else {
+                results.innerHTML += `<p>✅ Found ${buckets.length} buckets:</p>`
+                results.innerHTML += '<ul>'
+                buckets.forEach(bucket => {
+                    results.innerHTML += `<li>${bucket.name} (${bucket.public ? 'PUBLIC' : 'PRIVATE'})</li>`
+                })
+                results.innerHTML += '</ul>'
+                
+                const avatarsBucket = buckets.find(b => b.name === 'avatars')
+                if (!avatarsBucket) {
+                    results.innerHTML += '<p style="color: red;">❌ "avatars" bucket NOT found!</p>'
+                    results.innerHTML += '<p>You need to create an "avatars" bucket in Supabase Storage</p>'
+                } else if (!avatarsBucket.public) {
+                    results.innerHTML += '<p style="color: orange;">⚠️ "avatars" bucket exists but is PRIVATE!</p>'
+                    results.innerHTML += '<p>You need to make it PUBLIC for images to display</p>'
+                } else {
+                    results.innerHTML += '<p style="color: green;">✅ "avatars" bucket is PUBLIC - Good!</p>'
+                }
+            }
+        }
+        
+        checkStorage()
+    </script>
+</body>
+</html>

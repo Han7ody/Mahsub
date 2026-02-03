@@ -1,0 +1,14 @@
+Changes needed to make worker modal more compact:
+
+1. Avatar size: w-32 h-32 → w-24 h-24 md:w-28 md:h-28
+2. Avatar text: text-4xl → text-3xl
+3. Camera button: w-10 h-10 bottom-1 right-1 border-4 text-xl → w-9 h-9 bottom-0 right-0 border-3 text-lg
+4. Change image button: mt-3 text-sm → mt-2 text-xs
+5. Basic info gap: gap-6 → gap-4
+6. Placeholder: "مثلاً: محمد علي حسن" → "الاسم الكامل"
+7. Role section spacing: space-y-3 → space-y-2
+8. Role buttons: py-3 px-4 → py-2.5 px-3 text-sm
+9. Permissions spacing: space-y-4 → space-y-3
+10. Permissions grid: gap-x-8 gap-y-4 → gap-x-6 gap-y-3
+11. Permission items: p-3 → p-2.5
+12. Content area padding: p-4 md:p-6 space-y-6 md:space-y-8 → p-4 md:p-5 space-y-4 md:space-y-5

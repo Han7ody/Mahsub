@@ -1,0 +1,5 @@
+{
+    "chat.agent.maxRequests": 100,
+    "css.lint.unknownAtRules": "ignore",
+    "typescript.autoClosingTags": false
+}
