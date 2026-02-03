@@ -25,6 +25,34 @@ npm run dev
 
 3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## GitHub Pages
+
+This repo is configured to deploy a **static preview** to GitHub Pages using a GitHub Actions workflow.
+
+- Workflow: [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml)
+- Static export mode is enabled when `GITHUB_PAGES=true` (adds `basePath`/`assetPrefix` and sets `output: 'export'`).
+
+To enable Pages:
+
+1. Go to **Settings → Pages**
+2. Under **Build and deployment**, select **Source: GitHub Actions**
+3. Push to `main` (or run the workflow manually)
+
+Local test (PowerShell):
+
+```powershell
+$env:GITHUB_PAGES='true'
+$env:NEXT_PUBLIC_USE_BACKEND='false'
+npm run build
+```
+
+Note: GitHub Pages is static hosting, so backend routes (API/auth callbacks/middleware) are disabled in this deployment.
+
+## Development Status
+
+- Registration and login are currently disabled.
+- The UI displays an "under development" notice site-wide.
+
 ## Project Structure
 
 ```
