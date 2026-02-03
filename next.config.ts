@@ -2,20 +2,27 @@ import type { NextConfig } from 'next';
 
 const isGitHubPages = process.env.GITHUB_PAGES === 'true';
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')?.[1] ?? 'Mahsub';
-const basePath = isGitHubPages ? `/${repoName}` : undefined;
+const configuredBasePath = process.env.GITHUB_PAGES_BASE_PATH;
+
+const inferredBasePath = isGitHubPages ? `/${repoName}` : '';
+const rawBasePath = isGitHubPages ? (configuredBasePath ?? inferredBasePath) : '';
+const normalizedBasePath = rawBasePath && rawBasePath !== '/' ? rawBasePath : '';
+
+const basePath = normalizedBasePath || undefined;
+
+const pagesConfig: Partial<NextConfig> = isGitHubPages
+  ? {
+      output: 'export',
+      trailingSlash: true,
+      ...(basePath ? { basePath, assetPrefix: basePath } : {}),
+    }
+  : {};
 
 const nextConfig: NextConfig = {
   env: {
-    NEXT_PUBLIC_BASE_PATH: basePath ?? '',
+    NEXT_PUBLIC_BASE_PATH: normalizedBasePath,
   },
-  ...(isGitHubPages
-    ? {
-        output: 'export',
-        trailingSlash: true,
-        basePath,
-        assetPrefix: basePath,
-      }
-    : {}),
+  ...pagesConfig,
   // Enable gzip compression for response payloads (~60-70% reduction in size)
   compress: true,
   // Allow cross-origin requests from local network devices during development
