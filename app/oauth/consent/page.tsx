@@ -2,7 +2,7 @@ import Header from "@/components/marketing/Header";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
 
-export default function CompleteRegistrationPage() {
+export default function OAuthConsentPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
       <Header variant="minimal" ctaLabel="العودة للرئيسية" ctaHref="/" />
@@ -10,10 +10,10 @@ export default function CompleteRegistrationPage() {
         <Card className="w-full max-w-[520px]">
           <div className="p-8 md:p-10 text-center">
             <h1 className="text-text dark:text-text-dark tracking-tight text-2xl md:text-[32px] font-black leading-tight mb-3">
-              إكمال التسجيل غير متاح حالياً
+              غير متاح حالياً
             </h1>
             <p className="text-text-muted dark:text-text-muted-dark text-base leading-relaxed">
-              تم إيقاف التسجيل مؤقتاً أثناء التطوير.
+              التكاملات وتسجيل الدخول قيد التطوير.
             </p>
             <div className="pt-6">
               <Link

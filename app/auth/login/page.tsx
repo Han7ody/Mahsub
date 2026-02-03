@@ -1,214 +1,31 @@
-"use client";
-
 import Header from "@/components/marketing/Header";
 import { Card } from "@/components/ui/Card";
-import { TextField } from "@/components/ui/TextField";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import { createBrowserClient } from "@/lib/supabase/client";
-import { useToast } from "@/lib/toast-context";
-
-type LoginMethod = "phone" | "email";
-
-const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === "true";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { showToast } = useToast();
-  const [method, setMethod] = useState<LoginMethod>("email");
-  const [value, setValue] = useState("");
-  const [isValid, setIsValid] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const formRef = useRef<HTMLFormElement | null>(null);
-
-  const updateValidity = () => {
-    // Simple validation: ensure value has content
-    const isEmailValid = method === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-    const isPhoneValid = method === "phone" && value.trim().length === 10 && /^\d+$/.test(value);
-    setIsValid(isEmailValid || isPhoneValid);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isValid || isLoading) return;
-
-    if (USE_BACKEND) {
-      setIsLoading(true);
-      const supabase = createBrowserClient();
-
-      try {
-        if (method === "email") {
-          const { error } = await supabase.auth.signInWithOtp({
-            email: value.trim(),
-            options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-          });
-
-          if (error) throw error;
-
-          showToast("تم إرسال رابط تسجيل الدخول إلى بريدك الإلكتروني", "success");
-          router.push(`/auth/verify?mode=login&via=email&value=${encodeURIComponent(value.trim())}`);
-        }
-      } catch (error: any) {
-        showToast(error.message || "فشل تسجيل الدخول", "error");
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // Demo mode
-      const params = new URLSearchParams({
-        mode: "login",
-        via: method,
-        value: value.trim(),
-      });
-      router.push(`/auth/verify?${params.toString()}`);
-    }
-  };
-
-  const infoText =
-    method === "phone"
-      ? "سيتم إرسال رمز تحقق إلى رقم الهاتف"
-      : "سيتم إرسال رمز تحقق إلى البريد الإلكتروني";
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
-      <Header variant="minimal" />
+      <Header variant="minimal" ctaLabel="العودة للرئيسية" ctaHref="/" />
       <main className="flex-1 flex items-center justify-center px-4 py-10 md:py-12">
-        <Card className="w-full max-w-[480px]">
-          <div className="p-8 md:p-10 flex flex-col">
-            {/* Header */}
-            <div className="text-center pb-8">
-              <h1 className="text-text dark:text-text-dark tracking-tight text-2xl md:text-[32px] font-black leading-tight mb-2">
-                تسجيل الدخول
-              </h1>
-              <p className="text-text-muted dark:text-text-muted-dark text-base">
-                أدخل بياناتك للوصول إلى حسابك
-              </p>
-            </div>
-
-            <form
-              ref={formRef}
-              className="space-y-4 md:space-y-5"
-              onSubmit={handleSubmit}
-              onChange={updateValidity}
-              onInput={updateValidity}
-            >
-              {/* Method Switcher - Segmented Control */}
-              <div className="flex gap-3 bg-background-light dark:bg-background-dark p-1 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMethod("phone");
-                    setValue("");
-                    setIsValid(false);
-                  }}
-                  className={`flex-1 py-2 px-3 rounded-md text-sm font-bold transition-all ${
-                    method === "phone"
-                      ? "bg-white dark:bg-surface-dark text-primary shadow-sm border border-primary/20"
-                      : "text-text-muted dark:text-text-muted-dark hover:text-text dark:hover:text-text-dark"
-                  }`}
-                >
-                  رقم الهاتف
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMethod("email");
-                    setValue("");
-                    setIsValid(false);
-                  }}
-                  className={`flex-1 py-2 px-3 rounded-md text-sm font-bold transition-all ${
-                    method === "email"
-                      ? "bg-white dark:bg-surface-dark text-primary shadow-sm border border-primary/20"
-                      : "text-text-muted dark:text-text-muted-dark hover:text-text dark:hover:text-text-dark"
-                  }`}
-                >
-                  البريد الإلكتروني
-                </button>
-              </div>
-
-              {/* Conditional Input - Phone */}
-              {method === "phone" && (
-                <TextField
-                  type="tel"
-                  label="رقم الهاتف"
-                  placeholder="مثال: 0912345678"
-                  required
-                  dir="rtl"
-                  inputMode="numeric"
-                  maxLength={10}
-                  value={value}
-                  onChange={(e) => {
-                    setValue(e.currentTarget.value);
-                    updateValidity();
-                  }}
-                  onInput={(e) => {
-                    const t = e.currentTarget;
-                    t.value = t.value.replace(/[^0-9]/g, "");
-                    setValue(t.value);
-                    updateValidity();
-                  }}
-                  icon={<span className="material-symbols-outlined">smartphone</span>}
-                />
-              )}
-
-              {/* Conditional Input - Email */}
-              {method === "email" && (
-                <TextField
-                  type="email"
-                  label="البريد الإلكتروني"
-                  placeholder="example@domain.com"
-                  required
-                  dir="ltr"
-                  value={value}
-                  onChange={(e) => {
-                    setValue(e.currentTarget.value);
-                    updateValidity();
-                  }}
-                  onInput={updateValidity}
-                  icon={<span className="material-symbols-outlined">alternate_email</span>}
-                />
-              )}
-
-              {/* Info Box - Dynamic Text */}
-              <div className="bg-primary-soft dark:bg-primary/10 p-2 md:p-3 rounded-md border border-slate-100 dark:border-border-dark">
-                <p className="text-sm text-primary dark:text-primary leading-relaxed text-center font-medium">
-                  {infoText}
-                </p>
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <PrimaryButton type="submit" disabled={!isValid}>
-                  إرسال رمز التحقق
-                </PrimaryButton>
-              </div>
-            </form>
-
-            {/* Footer Link */}
-            <div className="pt-8 text-center border-t border-slate-100 dark:border-border-dark mt-8">
-              <p className="text-text-muted dark:text-text-muted-dark text-base">
-                ليس لديك حساب؟{" "}
-                <Link href="/auth/register" className="text-primary font-bold hover:underline">
-                  إنشاء حساب جديد
-                </Link>
-              </p>
+        <Card className="w-full max-w-[520px]">
+          <div className="p-8 md:p-10 text-center">
+            <h1 className="text-text dark:text-text-dark tracking-tight text-2xl md:text-[32px] font-black leading-tight mb-3">
+              تسجيل الدخول غير متاح حالياً
+            </h1>
+            <p className="text-text-muted dark:text-text-muted-dark text-base leading-relaxed">
+              نحن نعمل على تطوير الموقع. سيتم تفعيل تسجيل الدخول قريباً.
+            </p>
+            <div className="pt-6">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center bg-primary text-white px-6 py-3 rounded-xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+              >
+                العودة للرئيسية
+              </Link>
             </div>
           </div>
         </Card>
       </main>
-
-      <footer className="py-10 flex flex-col items-center justify-center gap-4">
-        <div className="flex gap-6 opacity-40">
-          <span className="material-symbols-outlined dark:text-white">shield_with_heart</span>
-          <span className="material-symbols-outlined dark:text-white">verified_user</span>
-          <span className="material-symbols-outlined dark:text-white">lock</span>
-        </div>
-        <p className="text-xs text-text-muted dark:text-text-muted-dark">© 2025 محسوب - حلول مالية ذكية للتجار في السودان</p>
-      </footer>
     </div>
   );
 }

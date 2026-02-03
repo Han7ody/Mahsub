@@ -1,8 +1,18 @@
 import type { NextConfig } from 'next';
 
-// Trigger restart
+const isGitHubPages = process.env.GITHUB_PAGES === 'true';
+const repoName = process.env.GITHUB_REPOSITORY?.split('/')?.[1] ?? 'Mahsub';
+const basePath = isGitHubPages ? `/${repoName}` : undefined;
 
 const nextConfig: NextConfig = {
+  ...(isGitHubPages
+    ? {
+        output: 'export',
+        trailingSlash: true,
+        basePath,
+        assetPrefix: basePath,
+      }
+    : {}),
   // Enable gzip compression for response payloads (~60-70% reduction in size)
   compress: true,
   // Allow cross-origin requests from local network devices during development
@@ -16,6 +26,7 @@ const nextConfig: NextConfig = {
   ],
   // Image optimization for Supabase Storage
   images: {
+    ...(isGitHubPages ? { unoptimized: true } : {}),
     remotePatterns: [
       {
         protocol: 'https',
