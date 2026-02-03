@@ -37,6 +37,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-anon-key'
         run: npm run build
 
+      - name: Disable Jekyll
+        run: touch out/.nojekyll
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
