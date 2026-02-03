@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { ShieldCheck, WhatsappLogo } from "@phosphor-icons/react";
 import ScrollReveal from "./ScrollReveal";
+import { withBasePath } from "@/lib/base-path";
 
 export default function HeroSection() {
   return (
@@ -67,7 +68,7 @@ export default function HeroSection() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-primary/5 rounded-full animate-[spin_60s_linear_infinite]"></div>
                 <div className="relative z-10 w-full h-full flex items-center justify-center">
                   <Image
-                    src="/images/financial-data.svg"
+                    src={withBasePath("/images/financial-data.svg")}
                     alt="إدارة الديون والحسابات"
                     fill
                     className="drop-shadow-2xl object-contain"

@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { NotePencil, Lightning } from "@phosphor-icons/react";
 import ScrollReveal from "./ScrollReveal";
+import { withBasePath } from "@/lib/base-path";
 
 export default function SwitchFromPaper() {
   return (
@@ -15,7 +16,7 @@ export default function SwitchFromPaper() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/5 rounded-full blur-3xl"></div>
                 <div className="relative z-10 w-full h-full">
                   <Image 
-                    src="/images/transformation.svg" 
+                    src={withBasePath("/images/transformation.svg")}
                     alt="التحول من الورق للرقمي" 
                     fill
                     className="object-contain drop-shadow-xl"

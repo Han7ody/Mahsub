@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { ArrowsClockwise, LockKey } from "@phosphor-icons/react";
 import ScrollReveal from "./ScrollReveal";
+import { withBasePath } from "@/lib/base-path";
 
 export default function SecurityFeature() {
   return (
@@ -52,7 +53,7 @@ export default function SecurityFeature() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/5 rounded-full blur-3xl"></div>
                 <div className="relative z-10 w-full h-full">
                   <Image 
-                    src="/images/secure-data.svg" 
+                    src={withBasePath("/images/secure-data.svg")}
                     alt="الأمان السحابي في محسوب" 
                     fill
                     className="object-contain drop-shadow-xl"

@@ -5,6 +5,9 @@ const repoName = process.env.GITHUB_REPOSITORY?.split('/')?.[1] ?? 'Mahsub';
 const basePath = isGitHubPages ? `/${repoName}` : undefined;
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath ?? '',
+  },
   ...(isGitHubPages
     ? {
         output: 'export',

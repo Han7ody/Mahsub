@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { withBasePath } from "@/lib/base-path";
 
 export default function InvoiceFeature() {
   return (
@@ -14,7 +15,7 @@ export default function InvoiceFeature() {
               
               <div className="relative z-10 w-full h-full">
                 <Image 
-                  src="/images/receipt-invoice.svg" 
+                  src={withBasePath("/images/receipt-invoice.svg")}
                   alt="إصدار الفواتير في محسوب" 
                   fill
                   className="object-contain drop-shadow-xl"
