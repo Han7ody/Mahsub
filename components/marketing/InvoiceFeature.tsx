@@ -15,7 +15,7 @@ export default function InvoiceFeature() {
               
               <div className="relative z-10 w-full h-full">
                 <Image 
-                  src={withBasePath("/images/receipt-invoice.svg")}
+                  src={withBasePath("/images/hero-illustration.svg")}
                   alt="إصدار الفواتير في محسوب" 
                   fill
                   className="object-contain drop-shadow-xl"
