@@ -48,6 +48,47 @@ npm run build
 
 Note: GitHub Pages is static hosting, so backend routes (API/auth callbacks/middleware) are disabled in this deployment.
 
+## Supabase (Link Backend)
+
+This project already includes Supabase clients and data repositories under `lib/supabase/*` and `lib/repo/*`.
+
+### Local development
+
+1. Create/update `.env.local` (it is ignored by git):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+NEXT_PUBLIC_USE_BACKEND=true
+```
+
+2. Run:
+
+```bash
+npm run dev
+```
+
+### GitHub Pages deployment
+
+1. In GitHub → **Settings → Secrets and variables → Actions**, add these repository secrets:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+2. In Supabase Dashboard → **Authentication → URL Configuration**, add your site URLs:
+
+- If using default Pages URL (repo basePath):
+	- `https://<username>.github.io/<repo>`
+	- Redirect URL: `https://<username>.github.io/<repo>/auth/callback`
+
+- If using a custom domain at root:
+	- `https://your-domain.com`
+	- Redirect URL: `https://your-domain.com/auth/callback`
+
+Notes:
+- `NEXT_PUBLIC_*` values are embedded into the frontend bundle at build time (they are not secrets in the browser). This is normal for Supabase anon keys.
+- For GitHub Pages static hosting, this repo generates Storage signed URLs directly from the browser (no Next.js API route required).
+
 ## Development Status
 
 - Registration and login are currently disabled.

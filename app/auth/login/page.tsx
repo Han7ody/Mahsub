@@ -13,6 +13,7 @@ import { useToast } from "@/lib/toast-context";
 type LoginMethod = "phone" | "email";
 
 const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === "true";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function LoginPage() {
           const { error } = await supabase.auth.signInWithOtp({
             email: value.trim(),
             options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
+              emailRedirectTo: `${window.location.origin}${BASE_PATH}/auth/callback`,
             },
           });
           if (error) throw error;

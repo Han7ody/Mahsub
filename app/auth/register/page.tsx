@@ -11,6 +11,7 @@ import { useToast } from "@/lib/toast-context";
 import { useRouter } from "next/navigation";
 
 const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === "true";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -82,7 +83,10 @@ export default function RegisterPage() {
                     // Send OTP code to email (creates user if needed)
                     const { error: otpError } = await supabase.auth.signInWithOtp({
                       email: email.trim(),
-                      options: { shouldCreateUser: true },
+                      options: {
+                        shouldCreateUser: true,
+                        emailRedirectTo: `${window.location.origin}${BASE_PATH}/auth/callback`,
+                      },
                     });
                     if (otpError) throw otpError;
 

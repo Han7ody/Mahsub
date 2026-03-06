@@ -10,6 +10,7 @@ import { useToast } from "@/lib/toast-context";
 
 const OTP_LENGTH = 6;
 const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === "true";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 function maskDestination(value: string | null, via: string | null) {
   if (!value) {
@@ -255,7 +256,10 @@ function VerifyPageContent() {
 
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: { shouldCreateUser: true },
+          options: {
+            shouldCreateUser: true,
+            emailRedirectTo: `${window.location.origin}${BASE_PATH}/auth/callback`,
+          },
         });
 
         if (error) {

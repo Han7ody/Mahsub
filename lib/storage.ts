@@ -9,6 +9,8 @@
 import { createBrowserClient } from '@/lib/supabase/client'
 import { createAttachment } from './repo/attachments'
 
+const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === 'true'
+
 /**
  * Upload a receipt image to Supabase Storage
  * Path structure: {businessId}/{transactionId}/{filename}
@@ -226,29 +228,50 @@ export async function getSignedUrl(
       return inFlight;
     }
     
-    const response = await fetch('/api/storage/signed-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        bucket,
-        path,
-        expiresIn,
-        download,
-      }),
-    })
+    let signedUrl: string | null = null
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error(`Signed URL API error (${response.status}):`, errorData.error || 'Unknown error', { bucket, path })
-      throw new Error(errorData.error || 'Failed to get signed URL')
-    }
+    // Static hosting (GitHub Pages) has no Next.js route handlers at runtime.
+    // Generate signed URLs directly from the browser using the anon key.
+    if (USE_BACKEND) {
+      const supabase = createBrowserClient()
+      const options: any = {}
+      if (download) {
+        const filename = String(path).split('/').pop() || 'file'
+        options.download = filename
+      }
 
-    const { signedUrl, error } = await response.json()
-    
-    if (error) {
-      throw new Error(error)
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, expiresIn, options)
+
+      if (error) throw error
+      signedUrl = data?.signedUrl ?? null
+    } else {
+      // Server-hosted fallback (requires API route to exist)
+      const response = await fetch('/api/storage/signed-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bucket,
+          path,
+          expiresIn,
+          download,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error(`Signed URL API error (${response.status}):`, errorData.error || 'Unknown error', { bucket, path })
+        throw new Error(errorData.error || 'Failed to get signed URL')
+      }
+
+      const json = await response.json()
+      if (json?.error) {
+        throw new Error(json.error)
+      }
+      signedUrl = json?.signedUrl ?? null
     }
 
     // Cache the signed URL
@@ -302,28 +325,49 @@ export async function getSignedUrlsBatch(
       return { signedUrls: cachedUrls, error: null };
     }
 
-    // Fetch uncached URLs in batch
-    const response = await fetch('/api/storage/signed-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        bucket,
-        paths: uncachedPaths,
-        expiresIn,
-      }),
-    });
+    let fetchedUrls: Record<string, string> = {}
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get signed URLs');
-    }
+    if (USE_BACKEND) {
+      // Static hosting: generate signed URLs directly via the browser client.
+      const supabase = createBrowserClient()
+      const results = await Promise.all(
+        uncachedPaths.map(async (path) => {
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(path, expiresIn)
+          if (error) throw error
+          return { path, url: data?.signedUrl ?? '' }
+        })
+      )
 
-    const { signedUrls: fetchedUrls, error } = await response.json();
-    
-    if (error) {
-      throw new Error(error);
+      for (const r of results) {
+        if (r.url) fetchedUrls[r.path] = r.url
+      }
+    } else {
+      // Server-hosted fallback: call the API route (requires it to exist at runtime)
+      const response = await fetch('/api/storage/signed-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bucket,
+          paths: uncachedPaths,
+          expiresIn,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get signed URLs');
+      }
+
+      const json = await response.json();
+      if (json?.error) {
+        throw new Error(json.error);
+      }
+
+      fetchedUrls = (json?.signedUrls || {}) as Record<string, string>
     }
 
     // Cache the fetched URLs

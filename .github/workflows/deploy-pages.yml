@@ -34,10 +34,11 @@ jobs:
           # When using a custom domain like https://mahsub.me, Pages serves at the domain root.
           # Use '/' as a sentinel for "no basePath" (empty env vars can be dropped by shells/runners).
           GITHUB_PAGES_BASE_PATH: '/'
-          NEXT_PUBLIC_USE_BACKEND: 'false'
-          # Dummy values to prevent accidental runtime crashes if any client code instantiates Supabase.
-          NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-anon-key'
+          # Enable real backend (Supabase) in the deployed static site.
+          NEXT_PUBLIC_USE_BACKEND: 'true'
+          # These are public (safe in browser), but keep them in GitHub Secrets to avoid committing.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Disable Jekyll
