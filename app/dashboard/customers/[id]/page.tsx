@@ -1,7 +1,13 @@
 import CustomerProfileClient from "./CustomerProfileClient";
 
-// Allow dynamic ids so customer profiles open correctly.
-export const dynamicParams = true;
+import { customers } from "@/mocks/customers";
+
+// Required for `output: 'export'` (GitHub Pages static export).
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  return customers.map((customer) => ({ id: String(customer.id) }));
+}
 
 export default async function CustomerProfilePage({
   params,

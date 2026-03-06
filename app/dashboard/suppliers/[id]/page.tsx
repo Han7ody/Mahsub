@@ -1,7 +1,13 @@
 import SupplierProfileClient from "./SupplierProfileClient";
 
-// Allow dynamic ids so supplier profiles open correctly.
-export const dynamicParams = true;
+import { suppliers } from "@/mocks/suppliers";
+
+// Required for `output: 'export'` (GitHub Pages static export).
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  return suppliers.map((supplier) => ({ id: String(supplier.id) }));
+}
 
 export default async function SupplierProfilePage({
   params,
