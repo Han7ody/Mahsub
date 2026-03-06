@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
 import MobileDrawer from "@/components/layout/MobileDrawer";
 import TransactionDetailsModal, { Transaction } from "@/components/dashboard/TransactionDetailsModal";
@@ -64,6 +65,7 @@ interface LedgerTransaction {
 }
 
 export default function DebtsLedgerPage() {
+  const router = useRouter();
   const { currentBusiness } = useAuth();
   const { showToast } = useToast();
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
@@ -135,13 +137,18 @@ export default function DebtsLedgerPage() {
   // Helper to map API transaction to local format
   const mapTransaction = (t: any): LedgerTransaction => {
     const dt = new Date(t.occurred_at);
+
+    // Use user's local timezone (device/browser) for date grouping and "today" calculations.
+    const localDate = dt.toLocaleDateString("en-CA"); // YYYY-MM-DD
+    const localTime = dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+
     return {
       id: t.id,
       title: t.title || "معاملة",
       type: t.type,
       amount: t.amount,
-      date: dt.toISOString().split("T")[0],
-      time: dt.toTimeString().slice(0, 5),
+      date: localDate,
+      time: localTime,
       method: t.payment_method === "cash" || t.payment_method === "online" ? t.payment_method : "cash",
       note: t.notes || undefined,
       occurredAt: t.occurred_at || undefined,
@@ -234,7 +241,12 @@ export default function DebtsLedgerPage() {
   const totals = useMemo(() => {
     const totalIn = transactions.filter((t) => t.type === "in").reduce((s, t) => s + t.amount, 0);
     const totalOut = transactions.filter((t) => t.type === "out").reduce((s, t) => s + t.amount, 0);
-    return { totalIn, totalOut, net: totalIn - totalOut };
+
+    // Cashflow convention (per product logic):
+    // - "in" (قبضت) is shown as NEGATIVE
+    // - "out" (أعطيته) is shown as POSITIVE
+    // Therefore the running cashflow balance we display is: out - in
+    return { totalIn, totalOut, net: totalOut - totalIn };
   }, [transactions]);
 
   // Animate the balance number
@@ -259,7 +271,7 @@ export default function DebtsLedgerPage() {
 
   // Compute today's balance
   const todayBalance = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString("en-CA");
     let todayIn = 0;
     let todayOut = 0;
 
@@ -273,7 +285,8 @@ export default function DebtsLedgerPage() {
       }
     });
 
-    return todayIn - todayOut;
+    // Same sign convention as totals: out - in
+    return todayOut - todayIn;
   }, [transactions]);
 
   // Animate today's balance
@@ -547,6 +560,8 @@ export default function DebtsLedgerPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="بحث بالتاريخ أو المعاملة..."
           onMenuClick={() => setIsDrawerOpen(true)}
+          showBackButton
+          onBackClick={() => router.back()}
           isLoading={isLoading}
           scrollContainerRef={mainRef}
         />
@@ -576,17 +591,52 @@ export default function DebtsLedgerPage() {
               </div>
 
               {/* Main Balance with Animation */}
-              {/* Logic: Negative = We have money (Asset/Ledger owes us) -> Red */}
-              {/*        Positive = Overdraft (We owe ledger) -> Green/Primary */}
+              {/* Cashflow sign convention: + = أعطيته (outflow), - = قبضت (inflow) */}
               <div className="flex items-baseline gap-2">
-                <p className={`tracking-tight text-4xl md:text-5xl font-black leading-tight transition-transform duration-300 ${totals.net > 0 ? 'text-red-600' : 'text-primary'} dark:text-white`}>
-                  {formatCurrencySDG(Math.round(animatedBalance * -1))}
+                <p
+                  className={`tracking-tight text-4xl md:text-5xl font-black leading-tight transition-transform duration-300 ${
+                    totals.net > 0
+                      ? "text-green-700 dark:text-green-400"
+                      : totals.net < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-slate-900 dark:text-white"
+                    }`}
+                >
+                  {`${totals.net > 0 ? "+" : totals.net < 0 ? "-" : ""}${formatCurrencySDG(Math.abs(Math.round(animatedBalance)))}`}
                 </p>
                 {balanceDirection === 'up' && (
-                  <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'out' ? 'text-red-600' : lastTransactionType === 'in' ? 'text-primary' : totals.net > 0 ? 'text-red-600' : 'text-primary'}`}>arrow_upward</span>
+                  <span
+                    className={`material-symbols-outlined text-2xl animate-bounce ${
+                      lastTransactionType === "out"
+                        ? "text-green-700 dark:text-green-400"
+                        : lastTransactionType === "in"
+                          ? "text-red-600 dark:text-red-400"
+                          : totals.net > 0
+                            ? "text-green-700 dark:text-green-400"
+                            : totals.net < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-900 dark:text-white"
+                      }`}
+                  >
+                    arrow_upward
+                  </span>
                 )}
                 {balanceDirection === 'down' && (
-                  <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'out' ? 'text-red-600' : lastTransactionType === 'in' ? 'text-primary' : totals.net > 0 ? 'text-red-600' : 'text-primary'}`}>arrow_downward</span>
+                  <span
+                    className={`material-symbols-outlined text-2xl animate-bounce ${
+                      lastTransactionType === "out"
+                        ? "text-green-700 dark:text-green-400"
+                        : lastTransactionType === "in"
+                          ? "text-red-600 dark:text-red-400"
+                          : totals.net > 0
+                            ? "text-green-700 dark:text-green-400"
+                            : totals.net < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-900 dark:text-white"
+                      }`}
+                  >
+                    arrow_downward
+                  </span>
                 )}
               </div>
 
@@ -594,15 +644,42 @@ export default function DebtsLedgerPage() {
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-text-muted text-sm font-medium">رصيد اليوم:</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`text-base font-black ${todayBalance > 0 ? "text-red-500" : "text-primary"}`}>
-                    {/* Invert Sign for Today's Balance too */}
-                    {`${todayBalance > 0 ? "-" : "+"}${formatCurrencySDG(Math.abs(Math.round(animatedTodayBalance)))}`}
+                  <span
+                    className={`text-base font-black ${
+                      todayBalance > 0
+                        ? "text-green-700 dark:text-green-400"
+                        : todayBalance < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-slate-900 dark:text-white"
+                      }`}
+                  >
+                    {`${todayBalance > 0 ? "+" : todayBalance < 0 ? "-" : ""}${formatCurrencySDG(Math.abs(Math.round(animatedTodayBalance)))}`}
                   </span>
                   {todayDirection === 'up' && (
-                    <span className={`material-symbols-outlined text-lg animate-bounce ${todayBalance > 0 ? "text-red-500" : "text-primary"}`}>arrow_upward</span>
+                    <span
+                      className={`material-symbols-outlined text-lg animate-bounce ${
+                        todayBalance > 0
+                          ? "text-green-700 dark:text-green-400"
+                          : todayBalance < 0
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-slate-900 dark:text-white"
+                        }`}
+                    >
+                      arrow_upward
+                    </span>
                   )}
                   {todayDirection === 'down' && (
-                    <span className={`material-symbols-outlined text-lg animate-bounce ${todayBalance > 0 ? "text-red-500" : "text-primary"}`}>arrow_downward</span>
+                    <span
+                      className={`material-symbols-outlined text-lg animate-bounce ${
+                        todayBalance > 0
+                          ? "text-green-700 dark:text-green-400"
+                          : todayBalance < 0
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-slate-900 dark:text-white"
+                        }`}
+                    >
+                      arrow_downward
+                    </span>
                   )}
                 </div>
               </div>
@@ -747,8 +824,13 @@ export default function DebtsLedgerPage() {
 
                         {/* Amount */}
                         <div className="text-left flex flex-col items-end shrink-0">
-                          <span className={`text-xl font-black ${t.type === "out" ? "text-red-500" : "text-primary"}`}>
-                            {t.type === "out" ? "- " : "+ "}{formatCurrencySDG(t.amount)}
+                          <span
+                            className={`text-xl font-black ${t.type === "out"
+                              ? "text-green-700 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                              }`}
+                          >
+                            {t.type === "out" ? "+ " : "- "}{formatCurrencySDG(t.amount)}
                           </span>
                         </div>
                       </div>
@@ -766,7 +848,7 @@ export default function DebtsLedgerPage() {
                       <div className="size-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                       <div className="size-2 bg-primary rounded-full animate-bounce"></div>
                     </div>
-                    <span className="text-xs font-black text-primary uppercase tracking-widest">جاري جلب المعاملات...</span>
+                    <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">جاري جلب المعاملات...</span>
                   </div>
                 ) : reachedMaxLoads || !hasMoreItems ? (
                   <div className="w-full flex items-center gap-4 px-8 opacity-40">

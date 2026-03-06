@@ -76,41 +76,16 @@ export async function getSupplierById(
 
     // Calculate current balance
     //
-    // ⚠️ CRITICAL SEMANTIC DOCUMENTATION:
-    // This balance formula is INVERTED relative to customers domain due to opposite transaction semantics.
-    // This is NOT a bug—it is a conscious design decision. Both formulas are mathematically correct.
-    //
-    // TRANSACTION SEMANTICS (opposite in each domain):
-    //   CUSTOMERS:
-    //     - totalOut = money customer owes us (purchases, debts)
-    //     - totalIn = money we received from customer (payments)
-    //   SUPPLIERS:
-    //     - totalIn = money we owe supplier (purchases we made)
-    //     - totalOut = money we paid to supplier (payments made)
-    //
-    // BALANCE CALCULATION:
-    //   CUSTOMERS: balance = opening + (totalOut - totalIn)
-    //     Positive = customer owes us, Negative = we owe customer
-    //   SUPPLIERS: balance = opening + (totalIn - totalOut)
-    //     Positive = we owe supplier, Negative = supplier owes us
-    //
-    // STATUS FLAG MEANINGS (domain-dependent):
-    //   - 'debt' in Customer context = customer owes us (positive balance)
-    //   - 'debt' in Supplier context = we owe supplier (positive balance)
-    //   SAME LABEL, OPPOSITE MEANINGS! Always check domain context.
-    //
-    // OPENING BALANCE DIRECTION FIELD:
-    //   opening_balance_direction='in':
-    //     For customers: "customer owes us X" (liability to us)
-    //     For suppliers: "we owe supplier X" (liability to them)
-    //
-    // DEVELOPERS: If modifying balance calculations, ensure changes are mirrored
-    // and documented in BOTH suppliers.ts and customers.ts
-    //
+    // Cashflow semantics:
+    // We treat suppliers exactly like customers (per product decision):
+    //   - "out" = أعطيته = + (cash outflow)
+    //   - "in"  = قبضت = - (cash inflow)
+    // Balance formula (both domains): openingSigned + (totalOut - totalIn)
+    // Cashflow convention (same as customers): out = + , in = -
     const openingBalance = data.opening_balance || 0
     const openingDirection = data.opening_balance_direction || 'in'
-    const signedOpeningBalance = openingDirection === 'in' ? openingBalance : -openingBalance
-    const currentBalance = signedOpeningBalance + (totalIn - totalOut)
+    const signedOpeningBalance = openingDirection === 'out' ? openingBalance : -openingBalance
+    const currentBalance = signedOpeningBalance + (totalOut - totalIn)
     const status = currentBalance > 0 ? 'debt' : currentBalance < 0 ? 'credit' : 'clear'
 
     const supplierWithBalance: SupplierWithBalance = {

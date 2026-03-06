@@ -2,136 +2,212 @@
 
 import Header from "@/components/marketing/Header";
 import { Card } from "@/components/ui/Card";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TextField } from "@/components/ui/TextField";
-import { createBrowserClient } from "@/lib/supabase/client";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
+import { createBrowserClient } from "@/lib/supabase/client";
+import { useToast } from "@/lib/toast-context";
+
+type LoginMethod = "phone" | "email";
+
+const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === "true";
 
 export default function LoginPage() {
-  const isAuthDisabled = useMemo(
-    () => process.env.NEXT_PUBLIC_USE_BACKEND === "false",
-    []
-  );
-
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
+
+  const [method, setMethod] = useState<LoginMethod>("email");
+  const [value, setValue] = useState("");
+  const [isValid, setIsValid] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  const updateValidity = () => {
+    const trimmed = value.trim();
+    const isEmailValid = method === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    const isPhoneValid = method === "phone" && trimmed.length === 10 && /^\d+$/.test(trimmed);
+    setIsValid(isEmailValid || isPhoneValid);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(null);
+    if (!isValid || isLoading) return;
 
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      setErrorMessage("Supabase env vars are missing in this environment.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
+    if (USE_BACKEND) {
+      setIsLoading(true);
       const supabase = createBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
 
-      if (error) {
-        setErrorMessage(error.message);
-        return;
+      try {
+        if (method === "email") {
+          const { error } = await supabase.auth.signInWithOtp({
+            email: value.trim(),
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
+          });
+          if (error) throw error;
+
+          showToast("تم إرسال رمز/رابط تسجيل الدخول إلى بريدك الإلكتروني", "success");
+          router.push(
+            `/auth/verify?mode=login&via=email&value=${encodeURIComponent(value.trim())}`
+          );
+          return;
+        }
+
+        // Phone login is UI-only for now (unless you wire SMS provider in Supabase)
+        showToast("تسجيل الدخول عبر الهاتف غير مفعّل حالياً", "error");
+      } catch (error: any) {
+        showToast(error?.message || "فشل تسجيل الدخول", "error");
+      } finally {
+        setIsLoading(false);
       }
-
-      router.replace("/dashboard");
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      // Demo mode
+      const params = new URLSearchParams({
+        mode: "login",
+        via: method,
+        value: value.trim(),
+      });
+      router.push(`/auth/verify?${params.toString()}`);
     }
   };
 
-  if (isAuthDisabled) {
-    return (
-      <div className="flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
-        <Header variant="minimal" ctaLabel="العودة للرئيسية" ctaHref="/" />
-        <main className="flex-1 flex items-center justify-center px-4 py-10 md:py-12">
-          <Card className="w-full max-w-[520px]">
-            <div className="p-8 md:p-10 text-center">
-              <h1 className="text-text dark:text-text-dark tracking-tight text-2xl md:text-[32px] font-black leading-tight mb-3">
-                تسجيل الدخول غير متاح حالياً
-              </h1>
-              <p className="text-text-muted dark:text-text-muted-dark text-base leading-relaxed">
-                نحن نعمل على تطوير الموقع. سيتم تفعيل تسجيل الدخول قريباً.
-              </p>
-              <div className="pt-6">
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center bg-primary text-white px-6 py-3 rounded-xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all"
-                >
-                  العودة للرئيسية
-                </Link>
-              </div>
-            </div>
-          </Card>
-        </main>
-      </div>
-    );
-  }
+  const infoText =
+    method === "phone" ? "سيتم إرسال رمز تحقق إلى رقم الهاتف" : "سيتم إرسال رمز تحقق إلى البريد الإلكتروني";
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
-      <Header variant="minimal" ctaLabel="العودة للرئيسية" ctaHref="/" />
-      <main className="flex-1 flex items-center justify-center px-4 py-10 md:py-12">
-        <Card className="w-full max-w-[520px]">
-          <div className="p-8 md:p-10">
-            <h1 className="text-text dark:text-text-dark tracking-tight text-2xl md:text-[32px] font-black leading-tight mb-6 text-center">
-              تسجيل الدخول
-            </h1>
+      <Header variant="minimal" />
+      <main className="flex-1 flex items-start md:items-center justify-center px-4 py-10 md:py-12">
+        <Card className="w-full max-w-[480px]">
+          <div className="p-8 md:p-10 flex flex-col">
+            <div className="text-center pb-8">
+              <h1 className="text-text dark:text-text-dark tracking-tight text-2xl md:text-[32px] font-black leading-tight mb-2">
+                تسجيل الدخول
+              </h1>
+              <p className="text-text-muted dark:text-text-muted-dark text-base">
+                أدخل بياناتك للوصول إلى حسابك
+              </p>
+            </div>
 
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <TextField
-                type="email"
-                dir="ltr"
-                autoComplete="email"
-                label="البريد الإلكتروني"
-                placeholder="name@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+            <form
+              ref={formRef}
+              className="space-y-4 md:space-y-5"
+              onSubmit={handleSubmit}
+              onChange={updateValidity}
+              onInput={updateValidity}
+            >
+              <div className="flex gap-3 bg-background-light dark:bg-background-dark p-1 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMethod("phone");
+                    setValue("");
+                    setIsValid(false);
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-bold transition-all ${
+                    method === "phone"
+                      ? "bg-white dark:bg-surface-dark text-primary shadow-sm border border-primary/20"
+                      : "text-text-muted dark:text-text-muted-dark hover:text-text dark:hover:text-text-dark"
+                  }`}
+                >
+                  رقم الهاتف
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMethod("email");
+                    setValue("");
+                    setIsValid(false);
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-bold transition-all ${
+                    method === "email"
+                      ? "bg-white dark:bg-surface-dark text-primary shadow-sm border border-primary/20"
+                      : "text-text-muted dark:text-text-muted-dark hover:text-text dark:hover:text-text-dark"
+                  }`}
+                >
+                  البريد الإلكتروني
+                </button>
+              </div>
 
-              <TextField
-                type="password"
-                dir="ltr"
-                autoComplete="current-password"
-                label="كلمة المرور"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-
-              {errorMessage && (
-                <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                  {errorMessage}
-                </div>
+              {method === "phone" && (
+                <TextField
+                  type="tel"
+                  label="رقم الهاتف"
+                  placeholder="مثال: 0912345678"
+                  required
+                  dir="rtl"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={value}
+                  onChange={(e) => {
+                    setValue(e.currentTarget.value);
+                    updateValidity();
+                  }}
+                  onInput={(e) => {
+                    const t = e.currentTarget;
+                    t.value = t.value.replace(/[^0-9]/g, "");
+                    setValue(t.value);
+                    updateValidity();
+                  }}
+                  icon={<span className="material-symbols-outlined">smartphone</span>}
+                />
               )}
 
-              <PrimaryButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
-              </PrimaryButton>
+              {method === "email" && (
+                <TextField
+                  type="email"
+                  label="البريد الإلكتروني"
+                  placeholder="example@domain.com"
+                  required
+                  dir="ltr"
+                  value={value}
+                  onChange={(e) => {
+                    setValue(e.currentTarget.value);
+                    updateValidity();
+                  }}
+                  onInput={updateValidity}
+                  icon={<span className="material-symbols-outlined">alternate_email</span>}
+                />
+              )}
 
-              <div className="pt-2 text-center text-sm text-text-muted dark:text-text-muted-dark">
-                ما عندك حساب؟{" "}
-                <Link href="/auth/register" className="font-bold text-primary hover:underline">
-                  إنشاء حساب
-                </Link>
+              <div className="bg-primary-soft dark:bg-primary/10 p-2 md:p-3 rounded-md border border-slate-100 dark:border-border-dark">
+                <p className="text-sm text-primary dark:text-primary leading-relaxed text-center font-medium">
+                  {infoText}
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <PrimaryButton type="submit" disabled={!isValid || isLoading}>
+                  {isLoading ? "جاري الإرسال..." : "إرسال رمز التحقق"}
+                </PrimaryButton>
               </div>
             </form>
+
+            <div className="pt-8 text-center border-t border-slate-100 dark:border-border-dark mt-8">
+              <p className="text-text-muted dark:text-text-muted-dark text-base">
+                ليس لديك حساب؟{" "}
+                <Link href="/auth/register" className="text-primary font-bold hover:underline">
+                  إنشاء حساب جديد
+                </Link>
+              </p>
+            </div>
           </div>
         </Card>
       </main>
+
+      <footer className="py-10 flex flex-col items-center justify-center gap-4">
+        <div className="flex gap-6 opacity-40">
+          <span className="material-symbols-outlined dark:text-white">shield_with_heart</span>
+          <span className="material-symbols-outlined dark:text-white">verified_user</span>
+          <span className="material-symbols-outlined dark:text-white">lock</span>
+        </div>
+        <p className="text-xs text-text-muted dark:text-text-muted-dark">
+          © 2025 محسوب - حلول مالية ذكية للتجار في السودان
+        </p>
+      </footer>
     </div>
   );
 }

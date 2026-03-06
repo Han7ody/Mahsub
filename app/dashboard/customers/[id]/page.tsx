@@ -1,10 +1,7 @@
 import CustomerProfileClient from "./CustomerProfileClient";
 
-export const dynamicParams = false;
-
-export async function generateStaticParams() {
-  return [{ id: "demo" }] as Array<{ id: string }>;
-}
+// Allow dynamic ids so customer profiles open correctly.
+export const dynamicParams = true;
 
 export default async function CustomerProfilePage({
   params,

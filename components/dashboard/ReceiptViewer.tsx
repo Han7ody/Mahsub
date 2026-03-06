@@ -179,7 +179,7 @@ export default function ReceiptViewer({
   const handleDownload = async () => {
     if (!receiptPath) {
       // Fallback if no path is available
-      if (actualReceiptUrl) window.open(actualReceiptUrl, '_blank');
+      if (actualReceiptUrl) window.location.assign(actualReceiptUrl);
       return;
     }
     
@@ -189,13 +189,13 @@ export default function ReceiptViewer({
       
       if (error || !signedUrl) {
         console.error('Failed to generate download URL:', error);
-        // Fallback to opening in new tab
-        if (actualReceiptUrl) window.open(actualReceiptUrl, '_blank');
+        // Fallback
+        if (actualReceiptUrl) window.location.assign(actualReceiptUrl);
         return;
       }
       
-      // Open the download URL which will have Content-Disposition: attachment
-      window.open(signedUrl, '_blank');
+      // Navigate directly to the download URL (more reliable than window.open on mobile/popup blockers)
+      window.location.assign(signedUrl);
     } catch (error) {
       console.error('Failed to download receipt:', error);
       if (actualReceiptUrl) window.open(actualReceiptUrl, '_blank');
@@ -229,6 +229,18 @@ export default function ReceiptViewer({
     }
 
     if (type === "image" || type === "unknown") {
+      if (!actualReceiptUrl) {
+        return (
+          <div className="flex items-center justify-center bg-slate-100 dark:bg-slate-800 min-h-[300px]">
+            <div className="flex flex-col items-center gap-3 text-center px-6">
+              <span className="material-symbols-outlined text-4xl text-slate-400">receipt_long</span>
+              <p className="text-slate-600 dark:text-slate-300 font-bold">لا يوجد إيصال</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">هذه المعاملة لا تحتوي على صورة إيصال.</p>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div
           ref={containerRef}
@@ -252,7 +264,7 @@ export default function ReceiptViewer({
           )}
           <img
             ref={imageRef}
-            src={actualReceiptUrl || ""}
+            src={actualReceiptUrl}
             alt="الإيصال"
             onLoad={handleImageLoad}
             onError={handleImageError}
@@ -269,6 +281,18 @@ export default function ReceiptViewer({
     }
 
     if (type === "pdf") {
+      if (!actualReceiptUrl) {
+        return (
+          <div className="flex items-center justify-center bg-slate-100 dark:bg-slate-800 min-h-[300px]">
+            <div className="flex flex-col items-center gap-3 text-center px-6">
+              <span className="material-symbols-outlined text-4xl text-slate-400">receipt_long</span>
+              <p className="text-slate-600 dark:text-slate-300 font-bold">لا يوجد ملف</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">هذه المعاملة لا تحتوي على ملف PDF.</p>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="relative flex-1 bg-slate-100 dark:bg-slate-800 min-h-[400px] md:min-h-[500px]">
           {state === "loading" && (
@@ -279,7 +303,13 @@ export default function ReceiptViewer({
               </div>
             </div>
           )}
-          <iframe src={actualReceiptUrl || ""} className="w-full h-full border-0" onLoad={() => setState("loaded")} onError={() => setState("error")} title="عرض الإيصال" />
+          <iframe
+            src={actualReceiptUrl}
+            className="w-full h-full border-0"
+            onLoad={() => setState("loaded")}
+            onError={() => setState("error")}
+            title="عرض الإيصال"
+          />
         </div>
       );
     }

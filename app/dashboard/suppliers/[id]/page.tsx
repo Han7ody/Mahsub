@@ -1,10 +1,7 @@
 import SupplierProfileClient from "./SupplierProfileClient";
 
-export const dynamicParams = false;
-
-export async function generateStaticParams() {
-  return [{ id: "demo" }] as Array<{ id: string }>;
-}
+// Allow dynamic ids so supplier profiles open correctly.
+export const dynamicParams = true;
 
 export default async function SupplierProfilePage({
   params,

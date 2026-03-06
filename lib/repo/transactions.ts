@@ -325,6 +325,7 @@ export async function getTransactionsSummary(
       const totalIn = transactions.filter((t) => t.type === 'in').reduce((sum, t) => sum + Number(t.amount), 0)
       const totalOut = transactions.filter((t) => t.type === 'out').reduce((sum, t) => sum + Number(t.amount), 0)
 
+      // Cashflow balance convention: + (outflow) / - (inflow)
       return { totalIn, totalOut, balance: totalOut - totalIn, count: transactions.length, error: null }
     }
 

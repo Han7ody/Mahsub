@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
 import MobileDrawer from "@/components/layout/MobileDrawer";
 import TransactionDetailsModal, { Transaction } from "@/components/dashboard/TransactionDetailsModal";
@@ -30,6 +31,11 @@ export interface TransactionItem {
   date: string; // ISO: YYYY-MM-DD
   method?: "cash" | "online";
   occurredAt?: string; // Full ISO timestamp for editing
+  receipt?: {
+    url: string | null;
+    filename: string;
+    path: string;
+  };
 }
 
 interface Props {
@@ -45,7 +51,7 @@ function parseDate(s: string): Date | null {
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
-  const dt = new Date(Date.UTC(y, mo - 1, d));
+  const dt = new Date(y, mo - 1, d);
   return isNaN(dt.getTime()) ? null : dt;
 }
 
@@ -80,6 +86,7 @@ function filterTransactions(items: TransactionItem[], query: string) {
 type ModalMode = "debit" | "credit" | null;
 
 export default function SupplierProfileView({ supplier, transactions: initialTransactions, businessId }: Props) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -192,14 +199,24 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
           entityId: String(supplier.id)
         });
         if (freshData && freshData.length > 0) {
-          const mapped = freshData.map(t => ({
-            id: t.id,
-            title: t.title || t.notes || "",
-            type: t.type === "out" ? "debit" as const : "credit" as const,
-            amount: Number(t.amount) || 0,
-            date: t.occurred_at?.split("T")[0] || new Date().toISOString().split("T")[0],
-            occurredAt: t.occurred_at || "",
-          }));
+          const mapped = freshData.map(t => {
+            const hasReceipt = t.receipt_url || t.receipt_path;
+            return {
+              id: t.id,
+              title: t.title || t.notes || "",
+              type: t.type === "out" ? "debit" as const : "credit" as const,
+              amount: Number(t.amount) || 0,
+              date: t.occurred_at ? new Date(t.occurred_at).toLocaleDateString("en-CA") : new Date().toLocaleDateString("en-CA"),
+              occurredAt: t.occurred_at || "",
+              receipt: hasReceipt
+                ? {
+                    url: t.receipt_url ?? null,
+                    filename: t.receipt_path?.split("/").pop() || "receipt.jpg",
+                    path: t.receipt_path || "",
+                  }
+                : undefined,
+            };
+          });
           setTransactions(mapped);
         }
         setIsSaving(false);
@@ -255,20 +272,40 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
       title: transaction.title || transaction.notes || title,
       type: transaction.type === "out" ? "debit" : "credit",
       amount: Number(transaction.amount) || 0,
-      date: transaction.occurred_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+      date: transaction.occurred_at ? new Date(transaction.occurred_at).toLocaleDateString("en-CA") : new Date().toLocaleDateString("en-CA"),
       method: (transaction.payment_method as "cash" | "online") || "cash",
     };
 
     setTransactions([mapped, ...transactions]);
     showToast(modalMode === "debit" ? "تم تسجيل الدين" : "تم تسجيل التحصيل", "success");
 
-    // Upload receipt in background if provided
+    // Upload receipt if provided (and update transaction row so it shows immediately)
     if (data.receiptFile) {
       uploadReceipt(data.receiptFile, businessId, transaction.id)
-        .then(({ error: uploadError }) => {
+        .then(async ({ path, error: uploadError }) => {
           if (uploadError) {
             showToast("تم حفظ المعاملة ولكن فشل رفع الإيصال", "error");
+            return;
           }
+
+          // Generate signed URL for immediate preview
+          const { signedUrl } = await getSignedUrl('receipts', path);
+
+          // Persist on transaction record as well (optional but helps queries/UI)
+          await updateTransaction(transaction.id, {
+            receipt_path: path,
+            receipt_url: signedUrl || null,
+          });
+
+          // Update local state
+          setTransactions(prev => prev.map(t => t.id === transaction.id ? {
+            ...t,
+            receipt: {
+              url: signedUrl || null,
+              filename: path.split('/').pop() || 'receipt.jpg',
+              path,
+            }
+          } : t));
         });
     }
 
@@ -625,35 +662,25 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
     return current;
   }
 
-  // Logic: 
-  // Positive = We Owe Supplier (Payable) -> Show as Positive (+) -> Label "له رصيد" -> Green/Blue (Primary)
-  // Negative = Supplier Owes User (Receivable) -> Show as Negative (-) -> Label "عليه دين" -> Red
+  // Cashflow convention (same as customers):
+  // + = أعطيته (outflow), - = قبضت (inflow)
   const { signedBalance, derivedStatus, derivedAmount } = useMemo(() => {
     const openingBalance = Number((supplier as any).opening_balance ?? supplier.amount ?? 0);
-    const direction = (supplier as any).opening_balance_direction === "out" ? -1 : 1;
-    const openingSigned = openingBalance * direction;
+    const openingDir = ((supplier as any).opening_balance_direction || 'in') as 'in' | 'out';
+    const openingSigned = openingDir === 'out' ? openingBalance : -openingBalance;
 
-    // Credit (We Owe / Goods In) adds to Payable (Positive)
-    // Debit (We Paid / Money Out) reduces Payable (Negative)
     const transactionsDelta = transactions.reduce((sum, t) => {
-      // In TS interface: type is 'debit' | 'credit'
-      // Mapped from DB 'out' | 'in'
-      // Here 'credit' means we owe (Positive impact on Payable)
-      // 'debit' means we paid (Negative impact on Payable)
-      return sum + (t.type === "credit" ? t.amount : -t.amount);
+      // debit(out) => + , credit(in) => -
+      return sum + (t.type === "debit" ? t.amount : -t.amount);
     }, 0);
 
     const signed = openingSigned + transactionsDelta;
-
-    // Status relative to US
-    // If signed > 0: We Owe (Payable) -> "له رصيد"
-    // If signed < 0: He Owes (Receivable/Debt) -> "عليه دين"
-    const status: "payable" | "receivable" | "clear" = signed > 0 ? "payable" : signed < 0 ? "receivable" : "clear";
+    const status: "debt" | "credit" | "clear" = signed > 0 ? "debt" : signed < 0 ? "credit" : "clear";
 
     return { signedBalance: signed, derivedStatus: status, derivedAmount: Math.abs(signed) };
   }, [supplier, transactions]);
 
-  const animatedAmount = useAnimatedNumber(derivedAmount);
+  const animatedAmountAbs = useAnimatedNumber(derivedAmount);
 
   // Track direction changes for balance
   const [prevDerivedAmount, setPrevDerivedAmount] = useState(derivedAmount);
@@ -672,17 +699,20 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
     setPrevDerivedAmount(derivedAmount);
   }, [derivedAmount, transactions]);
 
-  const amountLabel = derivedStatus === "payable" ? "الرصيد الدائن" : "المبلغ المطلوب";
+  const amountLabel = derivedStatus === "debt" ? "صافي أعطيته" : derivedStatus === "credit" ? "صافي قبضت" : "الرصيد";
 
-  // Receivable (Negative/He Owes) -> Red
-  // Payable (Positive/We Owe) -> Green/Primary
-  const amountClass = derivedStatus === "receivable" ? "text-red-600" : derivedStatus === "payable" ? "text-primary" : "text-text-muted";
+  // Colors in profiles (دفتر العناوين): + => GREEN, - => RED
+  const amountClass = derivedStatus === "debt"
+    ? "text-green-700 dark:text-green-400"
+    : derivedStatus === "credit"
+      ? "text-red-600 dark:text-red-400"
+      : "text-slate-900 dark:text-white";
 
-  const badge = derivedStatus === "payable"
-    ? { label: "له رصيد", bg: "bg-primary-soft", border: "border-primary/20", textClass: "text-primary" }
-    : derivedStatus === "receivable"
-      ? { label: "عليه دين", bg: "bg-red-50", border: "border-red-100", textClass: "text-red-600" }
-      : { label: "خالص", bg: "bg-slate-100", border: "border-slate-200", textClass: "text-slate-500" };
+  const badge = derivedStatus === "debt"
+    ? { label: "صافي أعطيته", bg: "bg-green-50 dark:bg-green-900/20", border: "border-green-200/60 dark:border-green-900/30", textClass: "text-green-700 dark:text-green-400" }
+    : derivedStatus === "credit"
+      ? { label: "صافي قبضت", bg: "bg-red-50 dark:bg-red-900/20", border: "border-red-200/60 dark:border-red-900/30", textClass: "text-red-600 dark:text-red-400" }
+      : { label: "متوازن", bg: "bg-slate-100 dark:bg-slate-700/40", border: "border-slate-200 dark:border-slate-700", textClass: "text-slate-900 dark:text-white" };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -697,6 +727,8 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
           onSearchChange={setSearchQuery}
           searchPlaceholder="بحث بالتاريخ أو عنوان المعاملة..."
           onMenuClick={() => setIsDrawerOpen(true)}
+          showBackButton
+          onBackClick={() => router.back()}
           primaryAction={{
             label: "تعيين تذكير",
             icon: "notifications",
@@ -758,17 +790,31 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
                     <p className="text-text-muted text-sm font-bold uppercase tracking-wider">الرصيد</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <p
-                        className={`text-text-main tracking-tight text-4xl md:text-5xl font-black leading-tight transition-transform duration-300 ${signedBalance < 0 ? 'text-red-600' : 'text-primary'}`}
+                        className={`text-text-main tracking-tight text-4xl md:text-5xl font-black leading-tight transition-transform duration-300 ${
+                          signedBalance > 0
+                            ? "text-green-700 dark:text-green-400"
+                            : signedBalance < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-900 dark:text-white"
+                          }`}
                         style={{ direction: 'ltr' }}
                       >
-                        {signedBalance > 0 ? '+' : ''}{Math.round(animatedAmount).toLocaleString("en-US")}
+                        {(signedBalance > 0 ? "+" : signedBalance < 0 ? "-" : "")}{Math.round(animatedAmountAbs).toLocaleString("en-US")}
                       </p>
                       <span className="text-lg font-bold text-text-muted">ج.س</span>
                       {balanceDirection === 'up' && (
-                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit' ? 'text-red-600' : lastTransactionType === 'credit' ? 'text-primary' : amountClass}`}>arrow_upward</span>
+                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit'
+                          ? 'text-green-700 dark:text-green-400'
+                          : lastTransactionType === 'credit'
+                            ? 'text-red-600 dark:text-red-400'
+                            : amountClass}`}>arrow_upward</span>
                       )}
                       {balanceDirection === 'down' && (
-                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit' ? 'text-red-600' : lastTransactionType === 'credit' ? 'text-primary' : amountClass}`}>arrow_downward</span>
+                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit'
+                          ? 'text-green-700 dark:text-green-400'
+                          : lastTransactionType === 'credit'
+                            ? 'text-red-600 dark:text-red-400'
+                            : amountClass}`}>arrow_downward</span>
                       )}
                     </div>
                   </div>
@@ -875,8 +921,8 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
                           {/* Diagonal Arrow Icon */}
                           <div
                             className={`size-12 rounded-full flex items-center justify-center shrink-0 ${t.type === "debit"
-                              ? "bg-red-500/10 text-red-500"
-                              : "bg-primary/10 text-primary"
+                              ? "bg-green-500/10 text-green-600"
+                              : "bg-red-500/10 text-red-500"
                               }`}
                           >
                             <span className="material-symbols-outlined text-2xl">
@@ -905,8 +951,13 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
 
                           {/* Amount */}
                           <div className="text-left flex flex-col items-end shrink-0">
-                            <span className={`text-xl font-black ${t.type === "debit" ? "text-red-500" : "text-primary"}`}>
-                              {t.type === "debit" ? "- " : "+ "}{t.amount.toLocaleString("en-US")} ج.س
+                            <span
+                              className={`text-xl font-black ${t.type === "debit"
+                                ? "text-green-700 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                                }`}
+                            >
+                              {t.type === "debit" ? "+ " : "- "}{t.amount.toLocaleString("en-US")} ج.س
                             </span>
                           </div>
                         </div>
@@ -916,7 +967,7 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
                 ))}
 
               {/* Opening Balance Row (Manually Appended) */}
-              {((supplier as any).opening_balance || 0) > 0 && (
+              {false && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3 px-4">
                     <div className="h-[1px] flex-1 bg-slate-100"></div>
@@ -933,7 +984,12 @@ export default function SupplierProfileView({ supplier, transactions: initialTra
                         <p className="text-sm text-slate-500">الرصيد في بداية التعامل</p>
                       </div>
                       <div className="text-left flex flex-col items-end shrink-0">
-                        <span className={`text-xl font-black ${(supplier as any).opening_balance_direction === 'out' ? 'text-primary' : 'text-red-500'}`}>
+                        <span
+                          className={`text-xl font-black ${(supplier as any).opening_balance_direction === 'out'
+                            ? 'text-green-700 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                            }`}
+                        >
                           {(supplier as any).opening_balance_direction === 'out' ? '+ ' : '- '}
                           {((supplier as any).opening_balance || 0).toLocaleString("en-US")} ج.س
                         </span>

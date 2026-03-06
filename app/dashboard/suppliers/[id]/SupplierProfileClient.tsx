@@ -32,17 +32,44 @@ export default function SupplierProfileClient({ supplierId }: { supplierId: stri
       }),
     ])
       .then(([supplierResult, transactionsResult]) => {
-        const mappedTransactions = (transactionsResult.transactions || []).map((t) => ({
-          id: t.id,
-          title: t.title || t.notes || (t.type === "out" ? "دين جديد" : "تحصيل"),
-          type: t.type === "out" ? "debit" : "credit",
-          amount: Number(t.amount) || 0,
-          date: t.occurred_at?.split("T")[0] || "",
-          notes: t.notes || "",
-        }));
+        const mappedTransactions = (transactionsResult.transactions || []).map((t) => {
+          const hasReceipt = t.receipt_url || t.receipt_path;
+          return {
+            id: t.id,
+            title: t.title || t.notes || (t.type === "out" ? "دين جديد" : "تحصيل"),
+            type: t.type === "out" ? "debit" : "credit",
+            amount: Number(t.amount) || 0,
+            date: t.occurred_at ? new Date(t.occurred_at).toLocaleDateString("en-CA") : "",
+            notes: t.notes || "",
+            receipt: hasReceipt
+              ? {
+                  url: t.receipt_url ?? null,
+                  filename: t.receipt_path?.split("/").pop() || "receipt.jpg",
+                  path: t.receipt_path || "",
+                }
+              : undefined,
+          };
+        });
 
         if (supplierResult.supplier) {
           const backendSupplier = supplierResult.supplier;
+
+          // Inject opening balance as a transaction row (shows in سجل المعاملات)
+          const openingBalance = Number(backendSupplier.opening_balance || 0);
+          if (openingBalance !== 0 && !mappedTransactions.some((t: any) => t.id === "opening-balance")) {
+            mappedTransactions.push({
+              id: "opening-balance",
+              title: "رصيد افتتاحي",
+              type: backendSupplier.opening_balance_direction === "out" ? "debit" : "credit",
+              amount: openingBalance,
+              date: backendSupplier.created_at
+                ? new Date(backendSupplier.created_at).toLocaleDateString("en-CA")
+                : "",
+              notes: "الرصيد في بداية التعامل",
+              receipt: undefined,
+            });
+          }
+
           const lastActivity =
             mappedTransactions[0]?.date || backendSupplier.created_at?.split("T")[0] || "—";
 

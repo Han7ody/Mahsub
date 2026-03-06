@@ -43,11 +43,11 @@ export default function CustomerProfileClient({ customerId }: { customerId: stri
               title: t.title || t.notes || (t.type === "out" ? "دين جديد" : "تحصيل"),
               type: t.type === "out" ? "debit" : "credit",
               amount: Number(t.amount) || 0,
-              date: t.occurred_at?.split("T")[0] || "",
+              date: t.occurred_at ? new Date(t.occurred_at).toLocaleDateString("en-CA") : "",
               notes: t.notes || "",
               receipt: hasReceipt
                 ? {
-                    url: t.receipt_url || "",
+                    url: t.receipt_url ?? null,
                     filename: t.receipt_path?.split("/").pop() || "receipt.jpg",
                     path: t.receipt_path || "",
                   }
@@ -57,6 +57,23 @@ export default function CustomerProfileClient({ customerId }: { customerId: stri
 
           if (customerResult.customer) {
             const backendCustomer = customerResult.customer;
+
+            // Inject opening balance as a transaction row (shows in سجل المعاملات)
+            const openingBalance = Number(backendCustomer.opening_balance || 0);
+            if (openingBalance !== 0 && !mappedTransactions.some((t: any) => t.id === "opening-balance")) {
+              mappedTransactions.push({
+                id: "opening-balance",
+                title: "رصيد افتتاحي",
+                type: backendCustomer.opening_balance_direction === "out" ? "debit" : "credit",
+                amount: openingBalance,
+                date: backendCustomer.created_at
+                  ? new Date(backendCustomer.created_at).toLocaleDateString("en-CA")
+                  : "",
+                notes: "الرصيد في بداية التعامل",
+                receipt: undefined,
+              });
+            }
+
             const lastActivity =
               mappedTransactions[0]?.date || backendCustomer.created_at?.split("T")[0] || "—";
 

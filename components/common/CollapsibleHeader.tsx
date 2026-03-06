@@ -10,6 +10,12 @@ interface CollapsibleHeaderProps {
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
   onMenuClick: () => void;
+
+  /** Optional back button (recommended for mobile). */
+  showBackButton?: boolean;
+  onBackClick?: () => void;
+  backAriaLabel?: string;
+
   primaryAction?: {
     label: string;
     icon: string;
@@ -27,6 +33,9 @@ export default function CollapsibleHeader({
   onSearchChange,
   searchPlaceholder,
   onMenuClick,
+  showBackButton = false,
+  onBackClick,
+  backAriaLabel = "رجوع",
   primaryAction,
   isLoading = false,
   scrollContainerRef,
@@ -34,6 +43,7 @@ export default function CollapsibleHeader({
 }: CollapsibleHeaderProps) {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isRTL, setIsRTL] = useState<boolean>(false);
   const rafRef = useRef<number | undefined>(undefined);
   const lastProgressRef = useRef<number>(0);
   const collapsedRef = useRef<boolean>(false);
@@ -53,6 +63,15 @@ export default function CollapsibleHeader({
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // RTL detection (for correct back-arrow direction)
+  useEffect(() => {
+    try {
+      setIsRTL(document?.documentElement?.dir === "rtl");
+    } catch {
+      // no-op
+    }
   }, []);
 
   // Smooth scroll-linked header collapse (mobile only)
@@ -152,9 +171,19 @@ export default function CollapsibleHeader({
       }}
     >
       <div className="max-w-6xl mx-auto">
-        {/* Desktop Layout - No changes */}
+        {/* Desktop Layout */}
         <div className="hidden md:flex flex-wrap items-center justify-between gap-4 md:gap-6">
           <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
+            {showBackButton && onBackClick && (
+              <button
+                onClick={onBackClick}
+                aria-label={backAriaLabel}
+                className="size-10 rounded-xl bg-slate-100 text-text-main flex items-center justify-center hover:bg-slate-200 transition-colors"
+              >
+                <span className="material-symbols-outlined">{isRTL ? "arrow_forward" : "arrow_back"}</span>
+              </button>
+            )}
+
             <h2 className="text-2xl font-bold text-text-main">{title}</h2>
             {badge && (
               <div className="bg-primary-soft text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/10">
@@ -197,6 +226,26 @@ export default function CollapsibleHeader({
             {/* Header Row */}
             <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${12 * (1 - scrollProgress)}px` }}>
               <div className="flex items-center gap-3 min-w-0 flex-1">
+                {showBackButton && onBackClick && (
+                  <button
+                    onClick={onBackClick}
+                    aria-label={backAriaLabel}
+                    className="border border-slate-100 text-slate-600 bg-white hover:bg-slate-50 flex items-center justify-center shrink-0 transition-colors duration-200"
+                    style={{
+                      width: `${40 - scrollProgress * 8}px`,
+                      height: `${40 - scrollProgress * 8}px`,
+                      borderRadius: `${16 - scrollProgress * 6}px`,
+                    }}
+                  >
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: `${24 - scrollProgress * 6}px` }}
+                    >
+                      {isRTL ? "arrow_forward" : "arrow_back"}
+                    </span>
+                  </button>
+                )}
+
                 <button
                   onClick={onMenuClick}
                   className="border border-slate-100 text-slate-600 bg-white hover:bg-slate-50 flex items-center justify-center shrink-0 transition-colors duration-200"

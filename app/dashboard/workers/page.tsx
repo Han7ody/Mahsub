@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
 import MobileDrawer from "@/components/layout/MobileDrawer";
 import WorkerDetailsModal from "@/components/dashboard/WorkerDetailsModal";
@@ -162,6 +163,7 @@ const WorkerCard = React.memo(({
 WorkerCard.displayName = 'WorkerCard';
 
 export default function WorkersPage() {
+  const router = useRouter();
   const { currentBusiness } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const mainRef = useRef<HTMLElement>(null);
@@ -306,6 +308,8 @@ export default function WorkersPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="بحث بالاسم، الدور، أو الهاتف..."
           onMenuClick={() => setIsDrawerOpen(true)}
+          showBackButton
+          onBackClick={() => router.back()}
           primaryAction={{
             label: "إضافة عامل",
             icon: "https://img.icons8.com/?size=100&id=1501&format=png&color=40C057",

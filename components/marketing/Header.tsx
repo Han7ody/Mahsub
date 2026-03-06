@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { List, X } from "@phosphor-icons/react";
 
 interface HeaderProps {
@@ -11,6 +11,10 @@ interface HeaderProps {
 
 export default function Header({ variant = "default", ctaLabel, ctaHref }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const lastScrollY = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
   const primaryLabel = ctaLabel ?? (variant === "minimal" ? "إنشاء حساب" : "ابدأ مجاناً");
   const primaryHref = ctaHref ?? "/auth/register";
 
@@ -21,9 +25,39 @@ export default function Header({ variant = "default", ctaLabel, ctaHref }: Heade
     { name: "تحميل التطبيق", href: "/#download" },
   ];
 
+  // Collapsible header logic (same idea as app headers: shrink on scroll)
+  useEffect(() => {
+    const onScroll = () => {
+      if (rafRef.current) return;
+      rafRef.current = window.requestAnimationFrame(() => {
+        const y = window.scrollY || 0;
+        const nextCollapsed = y > 24;
+        if (nextCollapsed !== isCollapsed) setIsCollapsed(nextCollapsed);
+        lastScrollY.current = y;
+        rafRef.current = null;
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white/90 dark:bg-background-dark/95 backdrop-blur-md z-[100] border-b border-slate-100 dark:border-white/5">
-      <div className="max-w-[1200px] mx-auto px-6 h-20 flex items-center justify-between">
+    <header
+      className={`sticky top-0 left-0 right-0 bg-white/90 dark:bg-background-dark/95 backdrop-blur-md z-[100] border-b border-slate-100 dark:border-white/5 transition-all duration-200 ${
+        isCollapsed ? "shadow-lg shadow-black/5" : "shadow-none"
+      }`}
+      style={{
+        // Smooth shrink on scroll
+        height: isCollapsed ? 64 : 80,
+      }}
+    >
+      <div className="max-w-[1200px] mx-auto px-6 h-full flex items-center justify-between">
         
         {/* Logo Section */}
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -88,7 +122,7 @@ export default function Header({ variant = "default", ctaLabel, ctaHref }: Heade
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="lg:hidden absolute top-20 left-0 right-0 bg-white dark:bg-background-dark border-b border-slate-100 dark:border-white/5 p-6 flex flex-col gap-6 shadow-2xl animate-slide-down">
+        <div className="lg:hidden absolute left-0 right-0 bg-white dark:bg-background-dark border-b border-slate-100 dark:border-white/5 p-6 flex flex-col gap-6 shadow-2xl animate-slide-down" style={{ top: isCollapsed ? 64 : 80 }}>
           {navLinks.map((link) => (
             <Link
               key={link.name}

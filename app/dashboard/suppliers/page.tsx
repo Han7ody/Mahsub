@@ -93,7 +93,7 @@ const SupplierAvatar = React.memo(({ supplier, avatarUrl }: { supplier: any; ava
       ) : showInitials ? (
         <div
           className={`w-full h-full flex items-center justify-center font-bold text-lg ${supplier.status === "clear"
-            ? "bg-primary-soft text-primary"
+            ? "bg-slate-100 text-slate-900 dark:bg-slate-700/50 dark:text-white"
             : "bg-slate-100 text-slate-500"
             }`}
         >
@@ -145,27 +145,30 @@ const SupplierRow = React.memo(({
   const statusConfig = {
     debt: {
       label: "عليه دين",
-      textClass: "text-red-600",
-      amountClass: "text-red-500",
-      bgClass: "bg-red-50",
+      // +ve should be GREEN
+      textClass: "text-green-700 dark:text-green-400",
+      amountClass: "text-green-700 dark:text-green-400",
+      bgClass: "bg-green-50 dark:bg-green-900/20",
     },
     clear: {
       label: "خالص",
-      textClass: "text-primary",
-      amountClass: "text-primary",
-      bgClass: "bg-primary-soft",
+      // 0 should be BLACK (or white in dark mode)
+      textClass: "text-slate-900 dark:text-white",
+      amountClass: "text-slate-900 dark:text-white",
+      bgClass: "bg-slate-100 dark:bg-slate-700/40",
     },
     credit: {
       label: "له رصيد",
-      textClass: "text-blue-600",
-      amountClass: "text-blue-600",
-      bgClass: "bg-blue-50",
+      // -ve should be RED
+      textClass: "text-red-600 dark:text-red-400",
+      amountClass: "text-red-600 dark:text-red-400",
+      bgClass: "bg-red-50 dark:bg-red-900/20",
     },
   }[status] || {
     label: "خالص",
-    textClass: "text-primary",
-    amountClass: "text-primary",
-    bgClass: "bg-primary-soft",
+    textClass: "text-slate-900 dark:text-white",
+    amountClass: "text-slate-900 dark:text-white",
+    bgClass: "bg-slate-100 dark:bg-slate-700/40",
   };
 
   return (
@@ -396,7 +399,8 @@ export default function SuppliersPage() {
       // Calculate signed amount for optimistic UI
       const opening = payload.openingBalance || 0;
       const direction = payload.openingBalanceDirection || 'in';
-      const signedOpening = direction === 'in' ? opening : -opening;
+      // Cashflow convention: out = + , in = -
+      const signedOpening = direction === 'out' ? opening : -opening;
       const listStatus = signedOpening > 0 ? 'debt' : signedOpening < 0 ? 'credit' : 'clear';
       const listAmount = Math.abs(signedOpening);
 
@@ -448,7 +452,13 @@ export default function SuppliersPage() {
               phone: supplier.phone || "",
               initials: supplier.name.slice(0, 2),
               amount: supplier.current_balance ?? supplier.opening_balance ?? 0,
-              status: supplier.status || 'clear',
+              status: (() => {
+                if (supplier.status) return supplier.status;
+                const opening = supplier.opening_balance || 0;
+                const direction = (supplier.opening_balance_direction || 'in') as 'in' | 'out';
+                const signed = direction === 'out' ? opening : -opening;
+                return signed > 0 ? 'debt' : signed < 0 ? 'credit' : 'clear';
+              })(),
               avatarUrl: finalAvatarUrl, // Seamless transition
               lastActivity: "اليوم",
               createdAt: supplier.created_at,
@@ -477,6 +487,8 @@ export default function SuppliersPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="بحث باسم المورد أو رقم هاتفه..."
           onMenuClick={handleOpenDrawer}
+          showBackButton
+          onBackClick={() => router.back()}
           primaryAction={emptyKind !== "empty" ? {
             label: "إضافة مورد",
             icon: "https://img.icons8.com/?size=100&id=1501&format=png&color=40C057",
@@ -554,11 +566,11 @@ export default function SuppliersPage() {
               <div className="grid grid-cols-2 gap-3 md:gap-6 divide-x divide-x-reverse divide-slate-100 mb-4 md:mb-6">
                 <div className="flex flex-col items-center justify-center">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="material-symbols-outlined text-red-500 text-base md:text-xl">trending_up</span>
-                    <p className="text-xs md:text-sm text-red-600 font-bold">عليهم</p>
+                    <span className="material-symbols-outlined text-primary text-base md:text-xl">trending_up</span>
+                    <p className="text-xs md:text-sm text-primary font-bold">عليهم</p>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-red-600 tracking-tight">
+                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-primary tracking-tight">
                       {formatCurrencySDG(Math.round(animatedTotalDebt))}
                     </h4>
                   </div>
@@ -567,11 +579,11 @@ export default function SuppliersPage() {
 
                 <div className="flex flex-col items-center justify-center">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="material-symbols-outlined text-primary text-base md:text-xl">trending_down</span>
-                    <p className="text-xs md:text-sm text-primary font-bold">لهم</p>
+                    <span className="material-symbols-outlined text-red-500 text-base md:text-xl">trending_down</span>
+                    <p className="text-xs md:text-sm text-red-600 font-bold">لهم</p>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-primary tracking-tight">
+                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-red-600 tracking-tight">
                       {formatCurrencySDG(Math.round(animatedExpectedCollection))}
                     </h4>
                   </div>

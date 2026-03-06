@@ -6,7 +6,6 @@ import { ToastProvider } from "@/lib/toast-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import RouteLoadingHandler from "@/components/common/RouteLoadingHandler";
-import UnderDevelopmentBanner from "@/components/common/UnderDevelopmentBanner";
 
 const cairo = Cairo({
   weight: ["400", "500", "600", "700"],
@@ -45,7 +44,6 @@ export default function RootLayout({
             <LoadingProvider>
               <ToastProvider>
                 <RouteLoadingHandler />
-                <UnderDevelopmentBanner />
                 {children}
               </ToastProvider>
             </LoadingProvider>

@@ -29,7 +29,7 @@ export interface TransactionItem {
   date: string; // ISO: YYYY-MM-DD
   notes?: string;
   receipt?: {
-    url: string;
+    url: string | null;
     filename: string;
     path: string;
   };
@@ -48,7 +48,7 @@ function parseDate(s: string): Date | null {
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
-  const dt = new Date(Date.UTC(y, mo - 1, d));
+  const dt = new Date(y, mo - 1, d);
   return isNaN(dt.getTime()) ? null : dt;
 }
 
@@ -207,10 +207,10 @@ export default function CustomerProfileView({ customer, transactions: initialTra
       title: savedTransaction.title || savedTransaction.notes || title,
       type: savedTransaction.type === "out" ? "debit" : "credit",
       amount: Number(savedTransaction.amount) || 0,
-      date: savedTransaction.occurred_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+      date: savedTransaction.occurred_at ? new Date(savedTransaction.occurred_at).toLocaleDateString("en-CA") : new Date().toLocaleDateString("en-CA"),
       notes: savedTransaction.notes || "",
-      receipt: savedTransaction.receipt_url ? {
-        url: savedTransaction.receipt_url,
+      receipt: (savedTransaction.receipt_url || savedTransaction.receipt_path) ? {
+        url: savedTransaction.receipt_url ?? null,
         filename: "receipt",
         path: savedTransaction.receipt_path || ""
       } : undefined
@@ -369,18 +369,17 @@ export default function CustomerProfileView({ customer, transactions: initialTra
     if (!hasOpeningTx) {
       const openingBalance = customer.opening_balance ?? customer.amount ?? 0;
 
-      // 'in' means positive (debt), 'out' means negative (credit)
-      // Default to 'in' (debt) if direction is missing
-      const direction = customer.opening_balance_direction === "out" ? -1 : 1;
+      // Cashflow convention: out = + , in = -
+      // Default to 'in' if missing.
+      const direction = customer.opening_balance_direction === "out" ? 1 : -1;
       openingSigned = openingBalance * direction;
     }
 
     // Logic: 
-    // Out / Gave / Debit: Positive (+) -> I Gave money -> He Owes Me (Debt) increases.
-    // In / Received / Credit: Negative (-) -> I Received money -> His Debt decreases.
+    // Cashflow convention:
+    // - debit (out / أعطيته) = +amount
+    // - credit (in / قبضت) = -amount
     const transactionsDelta = transactions.reduce((sum, t) => {
-      // type 'debit' = I Gave (Out) = +Amount
-      // type 'credit' = I Received (In) = -Amount
       return sum + (t.type === "debit" ? t.amount : -t.amount);
     }, 0);
 
@@ -452,28 +451,32 @@ export default function CustomerProfileView({ customer, transactions: initialTra
   };
 
   const currentStatus = useMemo(() => {
-    // New Logic:
-    // Positive (> 0) = He Owes Me (Debt) -> Red
-    // Negative (< 0) = I Owe Him (Credit) -> Green
+    // Cashflow convention:
+    // Positive (> 0) = صافي أعطيته (Outflow) -> "debt" bucket
+    // Negative (< 0) = صافي قبضت (Inflow) -> "credit" bucket
 
-    if (signedBalance > 0) return "credit"; // Maps to Red/Debt UI below (old variable name reuse)
-    if (signedBalance < 0) return "debt";   // Maps to Green/Credit UI below
+    if (signedBalance > 0) return "debt";   // outflow (+)
+    if (signedBalance < 0) return "credit"; // inflow (-)
     return "clear";
   }, [signedBalance]);
 
-  // Derived UI helpers 
-  // We reuse existing logic but map status correctly
-  // If status is "credit" -> Red (Debt) -> Label "عليه دين"
-  // If status is "debt" -> Green (Credit) -> Label "له رصيد"
+  // Colors in profiles (دفتر العناوين):
+  // + (debt bucket) => GREEN
+  // - (credit bucket) => RED
 
-  const amountLabel = currentStatus === "credit" ? "المبلغ المطلوب" : "الرصيد الدائن";
-  const amountClass = currentStatus === "credit" ? "text-red-600" : currentStatus === "debt" ? "text-primary" : "text-text-muted";
+  const amountLabel = currentStatus === "debt" ? "صافي أعطيته" : currentStatus === "credit" ? "صافي قبضت" : "الرصيد";
+  const amountClass = currentStatus === "debt"
+    ? "text-green-700 dark:text-green-400"
+    : currentStatus === "credit"
+      ? "text-red-600 dark:text-red-400"
+      : "text-slate-900 dark:text-white";
+
   const badge =
-    currentStatus === "credit"
-      ? { label: "عليه دين", bg: "bg-red-50", border: "border-red-100", textClass: "text-red-600" }
-      : currentStatus === "debt"
-        ? { label: "له رصيد", bg: "bg-primary-soft", border: "border-primary/20", textClass: "text-primary" }
-        : { label: "خالص", bg: "bg-slate-100", border: "border-slate-200", textClass: "text-slate-500" };
+    currentStatus === "debt"
+      ? { label: "صافي أعطيته", bg: "bg-green-50 dark:bg-green-900/20", border: "border-green-200/60 dark:border-green-900/30", textClass: "text-green-700 dark:text-green-400" }
+      : currentStatus === "credit"
+        ? { label: "صافي قبضت", bg: "bg-red-50 dark:bg-red-900/20", border: "border-red-200/60 dark:border-red-900/30", textClass: "text-red-600 dark:text-red-400" }
+        : { label: "متوازن", bg: "bg-slate-100 dark:bg-slate-700/40", border: "border-slate-200 dark:border-slate-700", textClass: "text-slate-900 dark:text-white" };
 
   // Track balance direction for visual effects on transaction changes
   const [prevBalance, setPrevBalance] = useState(displayBalance);
@@ -520,7 +523,7 @@ export default function CustomerProfileView({ customer, transactions: initialTra
     return current;
   }
 
-  const animatedBalance = useAnimatedNumber(Math.abs(displayBalance));
+  const animatedBalanceAbs = useAnimatedNumber(Math.abs(displayBalance));
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -534,6 +537,8 @@ export default function CustomerProfileView({ customer, transactions: initialTra
           onSearchChange={setSearchQuery}
           searchPlaceholder="بحث بالتاريخ أو عنوان المعاملة..."
           onMenuClick={() => setIsDrawerOpen(true)}
+          showBackButton
+          onBackClick={() => router.back()}
           primaryAction={{
             label: "تعيين تذكير",
             icon: "notifications",
@@ -594,8 +599,17 @@ export default function CustomerProfileView({ customer, transactions: initialTra
                   <div>
                     <p className="text-text-muted text-sm font-bold uppercase tracking-wider">الرصيد</p>
                     <div className="flex items-baseline gap-2 mt-1">
-                      <p className={`text-text-main tracking-tight text-4xl md:text-5xl font-black leading-tight transition-transform duration-300 ${displayBalance < 0 ? 'text-red-600' : 'text-primary'}`} style={{ direction: 'ltr' }}>
-                        {displayBalance > 0 ? '+' : ''}{Math.round(animatedBalance).toLocaleString("en-US")}
+                      <p
+                        className={`text-text-main tracking-tight text-4xl md:text-5xl font-black leading-tight transition-transform duration-300 ${
+                          displayBalance > 0
+                            ? "text-green-700 dark:text-green-400"
+                            : displayBalance < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-900 dark:text-white"
+                          }`}
+                        style={{ direction: 'ltr' }}
+                      >
+                        {(displayBalance > 0 ? "+" : displayBalance < 0 ? "-" : "")}{Math.round(animatedBalanceAbs).toLocaleString("en-US")}
                       </p>
                       <span className="text-lg font-bold text-text-muted">ج.س</span>
                       {amountClass && (
@@ -604,10 +618,18 @@ export default function CustomerProfileView({ customer, transactions: initialTra
                         </span>
                       )}
                       {balanceDirection === 'up' && (
-                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit' ? 'text-red-600' : lastTransactionType === 'credit' ? 'text-primary' : amountClass}`}>arrow_upward</span>
+                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit'
+                          ? 'text-green-700 dark:text-green-400'
+                          : lastTransactionType === 'credit'
+                            ? 'text-red-600 dark:text-red-400'
+                            : amountClass}`}>arrow_upward</span>
                       )}
                       {balanceDirection === 'down' && (
-                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit' ? 'text-red-600' : lastTransactionType === 'credit' ? 'text-primary' : amountClass}`}>arrow_downward</span>
+                        <span className={`material-symbols-outlined text-2xl animate-bounce ${lastTransactionType === 'debit'
+                          ? 'text-green-700 dark:text-green-400'
+                          : lastTransactionType === 'credit'
+                            ? 'text-red-600 dark:text-red-400'
+                            : amountClass}`}>arrow_downward</span>
                       )}
                     </div>
                   </div>
@@ -712,14 +734,16 @@ export default function CustomerProfileView({ customer, transactions: initialTra
                               datetime: t.date,
                               paymentMethod: "cash",
                               notes: t.notes || "",
-                              receipt: t.receipt,
+                              receipt: t.receipt?.url ? { url: t.receipt.url, filename: t.receipt.filename, path: t.receipt.path } : undefined,
                             });
                             setShowTransactionDetails(true);
                           }}
                           className="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 hover:shadow-md transition-all cursor-pointer"
                         >
                           <div
-                            className={`size-12 rounded-full flex items-center justify-center shrink-0 ${t.type === "debit" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary"
+                            className={`size-12 rounded-full flex items-center justify-center shrink-0 ${t.type === "debit"
+                              ? "bg-green-500/10 text-green-600"
+                              : "bg-red-500/10 text-red-500"
                               }`}
                           >
                             <span className="material-symbols-outlined text-2xl">
@@ -736,8 +760,13 @@ export default function CustomerProfileView({ customer, transactions: initialTra
                           </div>
 
                           <div className="text-left flex flex-col items-end shrink-0">
-                            <span className={`text-xl font-black ${t.type === "debit" ? "text-red-500" : "text-primary"}`}>
-                              {t.type === "debit" ? "- " : "+ "}
+                            <span
+                              className={`text-xl font-black ${t.type === "debit"
+                                ? "text-green-700 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                                }`}
+                            >
+                              {t.type === "debit" ? "+ " : "- "}
                               {t.amount.toLocaleString("en-US")} ج.س
                             </span>
                           </div>
@@ -748,7 +777,7 @@ export default function CustomerProfileView({ customer, transactions: initialTra
                 ))}
 
               {/* Opening Balance Row */}
-              {(customer.opening_balance || 0) > 0 && (
+              {false && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3 px-4">
                     <div className="h-[1px] flex-1 bg-slate-100"></div>
@@ -766,7 +795,12 @@ export default function CustomerProfileView({ customer, transactions: initialTra
                         <p className="text-sm text-slate-500">الرصيد في بداية التعامل</p>
                       </div>
                       <div className="text-left flex flex-col items-end shrink-0">
-                        <span className={`text-xl font-black ${customer.opening_balance_direction === 'out' ? 'text-primary' : 'text-red-500'}`}>
+                        <span
+                          className={`text-xl font-black ${customer.opening_balance_direction === 'out'
+                            ? 'text-green-700 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                            }`}
+                        >
                           {customer.opening_balance_direction === 'out' ? '+ ' : '- '}
                           {(customer.opening_balance || 0).toLocaleString("en-US")} ج.س
                         </span>

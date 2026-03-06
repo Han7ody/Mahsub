@@ -94,7 +94,7 @@ const CustomerAvatar = React.memo(({ customer, avatarUrl }: { customer: any; ava
       ) : showInitials ? (
         <div
           className={`w-full h-full flex items-center justify-center font-bold text-lg ${customer.status === "clear"
-            ? "bg-primary-soft text-primary"
+            ? "bg-slate-100 text-slate-900 dark:bg-slate-700/50 dark:text-white"
             : "bg-slate-100 text-slate-500"
             }`}
         >
@@ -147,27 +147,30 @@ const CustomerRow = React.memo(({
   const statusConfig = {
     debt: {
       label: t("status_debt"),
-      textClass: "text-red-600",
-      amountClass: "text-red-500",
-      bgClass: "bg-red-50",
+      // +ve should be GREEN
+      textClass: "text-green-700 dark:text-green-400",
+      amountClass: "text-green-700 dark:text-green-400",
+      bgClass: "bg-green-50 dark:bg-green-900/20",
     },
     clear: {
       label: t("status_clear"),
-      textClass: "text-primary",
-      amountClass: "text-primary",
-      bgClass: "bg-primary-soft",
+      // 0 should be BLACK (or white in dark mode)
+      textClass: "text-slate-900 dark:text-white",
+      amountClass: "text-slate-900 dark:text-white",
+      bgClass: "bg-slate-100 dark:bg-slate-700/40",
     },
     credit: {
       label: t("status_credit"),
-      textClass: "text-blue-600",
-      amountClass: "text-blue-600",
-      bgClass: "bg-blue-50",
+      // -ve should be RED
+      textClass: "text-red-600 dark:text-red-400",
+      amountClass: "text-red-600 dark:text-red-400",
+      bgClass: "bg-red-50 dark:bg-red-900/20",
     },
   }[status] || {
     label: t("status_clear"),
-    textClass: "text-primary",
-    amountClass: "text-primary",
-    bgClass: "bg-primary-soft",
+    textClass: "text-slate-900 dark:text-white",
+    amountClass: "text-slate-900 dark:text-white",
+    bgClass: "bg-slate-100 dark:bg-slate-700/40",
   };
 
   return (
@@ -401,8 +404,9 @@ export default function CustomersPage() {
         phone: payload.phone || "",
         initials: payload.name.split(' ').map((n) => n[0]).join(' ').substring(0, 2),
         amount: payload.openingBalance || 0,
+        // Cashflow convention: out = + , in = -
         status: payload.openingBalance > 0
-          ? (payload.openingBalanceDirection === "out" ? "credit" : "debt")
+          ? (payload.openingBalanceDirection === "out" ? "debt" : "credit")
           : "clear",
         avatar_url: null,
         lastActivity: "الآن",
@@ -433,7 +437,8 @@ export default function CustomersPage() {
           if (!finalStatus) {
             const opening = customer.opening_balance || 0;
             const direction = customer.opening_balance_direction || 'in';
-            const signed = direction === 'in' ? opening : -opening;
+            // Cashflow convention: out = + , in = -
+            const signed = direction === 'out' ? opening : -opening;
             finalStatus = signed > 0 ? 'debt' : signed < 0 ? 'credit' : 'clear';
           }
 
@@ -472,6 +477,8 @@ export default function CustomersPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder={t("search_placeholder")}
           onMenuClick={handleOpenDrawer}
+          showBackButton
+          onBackClick={() => router.back()}
           primaryAction={emptyKind !== "empty" ? {
             label: t("add_customer"),
             icon: "https://img.icons8.com/?size=100&id=1501&format=png&color=40C057",
@@ -554,11 +561,11 @@ export default function CustomersPage() {
               <div className="grid grid-cols-2 gap-3 md:gap-6 divide-x divide-x-reverse divide-slate-100 dark:divide-slate-700 mb-4 md:mb-6">
                 <div className="flex flex-col items-center justify-center">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="material-symbols-outlined text-red-500 text-base md:text-xl">trending_up</span>
-                    <p className="text-xs md:text-sm text-red-600 font-bold">{t("debt_on_them")}</p>
+                    <span className="material-symbols-outlined text-primary text-base md:text-xl">trending_up</span>
+                    <p className="text-xs md:text-sm text-primary font-bold">{t("debt_on_them")}</p>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-red-600 tracking-tight">
+                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-primary tracking-tight">
                       {formatCurrencySDG(Math.round(animatedTotalDebt))}
                     </h4>
                   </div>
@@ -567,11 +574,11 @@ export default function CustomersPage() {
 
                 <div className="flex flex-col items-center justify-center">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="material-symbols-outlined text-primary text-base md:text-xl">trending_down</span>
-                    <p className="text-xs md:text-sm text-primary font-bold">{t("credit_for_them")}</p>
+                    <span className="material-symbols-outlined text-red-500 text-base md:text-xl">trending_down</span>
+                    <p className="text-xs md:text-sm text-red-600 font-bold">{t("credit_for_them")}</p>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-primary tracking-tight">
+                    <h4 className="text-xl md:text-3xl lg:text-4xl font-black text-red-600 tracking-tight">
                       {formatCurrencySDG(Math.round(animatedExpectedCollection))}
                     </h4>
                   </div>
