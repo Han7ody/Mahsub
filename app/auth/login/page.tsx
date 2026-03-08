@@ -28,7 +28,7 @@ export default function LoginPage() {
   const updateValidity = (newValue?: string, newMethod?: LoginMethod) => {
     const trimmed = (newValue ?? value).trim();
     const currentMethod = newMethod ?? method;
-    const isEmailValid = currentMethod === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    const isEmailValid = currentMethod === "email" && /^[^\s@]+@[^"]\s@]+\.[^\s@]+$/.test(trimmed);
     const isPhoneValid = currentMethod === "phone" && trimmed.length === 10 && /^\d+$/.test(trimmed);
     setIsValid(isEmailValid || isPhoneValid);
   };
@@ -58,7 +58,6 @@ export default function LoginPage() {
           return;
         }
 
-        // Phone login is UI-only for now (unless you wire SMS provider in Supabase)
         showToast("تسجيل الدخول عبر الهاتف غير مفعّل حالياً", "error");
       } catch (error: any) {
         showToast(error?.message || "فشل تسجيل الدخول", "error");
@@ -66,7 +65,6 @@ export default function LoginPage() {
         setIsLoading(false);
       }
     } else {
-      // Demo mode
       const params = new URLSearchParams({
         mode: "login",
         via: method,
@@ -98,8 +96,6 @@ export default function LoginPage() {
               ref={formRef}
               className="space-y-4 md:space-y-5"
               onSubmit={handleSubmit}
-              onChange={updateValidity}
-              onInput={updateValidity}
             >
               <div className="flex gap-3 bg-background-light dark:bg-background-dark p-1 rounded-lg">
                 <button
@@ -194,7 +190,7 @@ export default function LoginPage() {
 
             <div className="pt-8 text-center border-t border-slate-100 dark:border-border-dark mt-8">
               <p className="text-text-muted dark:text-text-muted-dark text-base">
-                ليس لديك حساب؟{" "}
+                ليس لديك حساب؟ {" "}
                 <Link href="/auth/register" className="text-primary font-bold hover:underline">
                   إنشاء حساب جديد
                 </Link>
