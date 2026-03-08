@@ -25,10 +25,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
-  const updateValidity = () => {
-    const trimmed = value.trim();
-    const isEmailValid = method === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-    const isPhoneValid = method === "phone" && trimmed.length === 10 && /^\d+$/.test(trimmed);
+  const updateValidity = (newValue?: string, newMethod?: LoginMethod) => {
+    const trimmed = (newValue ?? value).trim();
+    const currentMethod = newMethod ?? method;
+    const isEmailValid = currentMethod === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    const isPhoneValid = currentMethod === "phone" && trimmed.length === 10 && /^\d+$/.test(trimmed);
     setIsValid(isEmailValid || isPhoneValid);
   };
 
@@ -107,6 +108,7 @@ export default function LoginPage() {
                     setMethod("phone");
                     setValue("");
                     setIsValid(false);
+                    updateValidity("", "phone");
                   }}
                   className={`flex-1 py-2 px-3 rounded-md text-sm font-bold transition-all ${
                     method === "phone"
@@ -122,6 +124,7 @@ export default function LoginPage() {
                     setMethod("email");
                     setValue("");
                     setIsValid(false);
+                    updateValidity("", "email");
                   }}
                   className={`flex-1 py-2 px-3 rounded-md text-sm font-bold transition-all ${
                     method === "email"
@@ -144,14 +147,15 @@ export default function LoginPage() {
                   maxLength={10}
                   value={value}
                   onChange={(e) => {
-                    setValue(e.currentTarget.value);
-                    updateValidity();
+                    const v = e.currentTarget.value;
+                    setValue(v);
+                    updateValidity(v);
                   }}
                   onInput={(e) => {
                     const t = e.currentTarget;
                     t.value = t.value.replace(/[^0-9]/g, "");
                     setValue(t.value);
-                    updateValidity();
+                    updateValidity(t.value);
                   }}
                   icon={<span className="material-symbols-outlined">smartphone</span>}
                 />
@@ -166,10 +170,11 @@ export default function LoginPage() {
                   dir="ltr"
                   value={value}
                   onChange={(e) => {
-                    setValue(e.currentTarget.value);
-                    updateValidity();
+                    const v = e.currentTarget.value;
+                    setValue(v);
+                    updateValidity(v);
                   }}
-                  onInput={updateValidity}
+                  onInput={(e) => updateValidity(e.currentTarget.value)}
                   icon={<span className="material-symbols-outlined">alternate_email</span>}
                 />
               )}
