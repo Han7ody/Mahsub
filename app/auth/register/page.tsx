@@ -112,8 +112,7 @@ export default function RegisterPage() {
                   router.push("/dashboard/customers");
                 }
               }}
-              onChange={updateValidity}
-              onInput={updateValidity}
+
             >
               <TextField
                 type="text"
@@ -157,9 +156,7 @@ export default function RegisterPage() {
                   onChange={(e) => {
                     setEmail(e.currentTarget.value);
                     setShowEmailSuggestions(true);
-                    updateValidity();
                   }}
-                  onInput={() => updateValidity()}
                   onFocus={() => setShowEmailSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowEmailSuggestions(false), 200)}
                   icon={<span className="material-symbols-outlined">alternate_email</span>}
@@ -175,7 +172,6 @@ export default function RegisterPage() {
                           e.preventDefault();
                           setEmail(s);
                           setShowEmailSuggestions(false);
-                          updateValidity();
                         }}
                         className="w-full text-right px-3 py-2 text-sm text-text dark:text-text-dark hover:bg-background-light dark:hover:bg-border-dark transition-colors"
                       >
